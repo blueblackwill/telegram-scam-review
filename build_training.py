@@ -12,9 +12,11 @@ from rules import DOMAIN_PATTERN, EXACT_LABELS, NEGATED_PREFIXES, RULES, detect
 ROOT = Path(__file__).resolve().parent
 TEMPLATE = ROOT / "training" / "index.template.html"
 DETECTOR = ROOT / "training" / "detector.js"
+REPLAY = ROOT / "training" / "replay.js"
 LESSONS = ROOT / "training" / "lessons.json"
 PLACEHOLDER = "__TRAINING_PAYLOAD__"
 DETECTOR_PLACEHOLDER = "/*__TRAINING_DETECTOR__*/"
+REPLAY_PLACEHOLDER = "/*__TRAINING_REPLAY__*/"
 MAX_SCREENSHOT_BYTES = 4 * 1024 * 1024
 PUBLIC_CHANNEL = re.compile(r"https://t\.me/([A-Za-z][A-Za-z0-9_]{4,31})", re.ASCII)
 TELEGRAM_ROUTES = {"addemoji", "addlist", "addstickers", "addtheme", "boost", "confirmphone",
@@ -55,6 +57,11 @@ def enrich_step(step):
         isinstance(value, str) and value.strip() for value in history.values()
     ):
         raise ValueError(f"{step['id']} needs a source reference and a safe comparison")
+    source = step.get("sourceNote")
+    if not isinstance(source, dict) or set(source) != {"observed", "interpretation", "unverified"} or not all(
+        isinstance(value, str) and value.strip() for value in source.values()
+    ):
+        raise ValueError(f"{step['id']} needs separate observed, interpretation and unverified source notes")
     rows = step["evidence"]
     if not rows:
         raise ValueError(f"{step['id']} has no teaching evidence")
@@ -175,14 +182,15 @@ def browser_payload(data, history_manifest, telegram_manifest=None, channel=None
 
 def compiled_html(history_manifest=None, telegram_manifest=None, channel=None):
     template = TEMPLATE.read_text(encoding="utf-8")
-    if template.count(PLACEHOLDER) != 1 or template.count(DETECTOR_PLACEHOLDER) != 1:
-        raise ValueError("The template needs one payload and one detector slot")
+    if any(template.count(slot) != 1 for slot in (PLACEHOLDER, DETECTOR_PLACEHOLDER, REPLAY_PLACEHOLDER)):
+        raise ValueError("The template needs one payload, detector and replay slot each")
     validated = lesson_payload(LESSONS.read_text(encoding="utf-8"))
     data = browser_payload(validated, history_manifest, telegram_manifest, channel)
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     payload = payload.replace("<", r"\u003c")
     code = DETECTOR.read_text(encoding="utf-8")
-    return template.replace(PLACEHOLDER, payload).replace(DETECTOR_PLACEHOLDER, code)
+    replay_code = REPLAY.read_text(encoding="utf-8")
+    return template.replace(PLACEHOLDER, payload).replace(DETECTOR_PLACEHOLDER, code).replace(REPLAY_PLACEHOLDER, replay_code)
 
 
 def main():

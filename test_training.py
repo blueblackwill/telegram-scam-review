@@ -39,6 +39,12 @@ class TrainingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "live links"):
             lesson_payload(self.raw.replace('\"title\":', '\"external\":\"https://example.invalid\",\"title\":', 1))
 
+    def test_source_note_cannot_omit_what_remains_unverified(self):
+        lesson = json.loads(self.raw)
+        del lesson["lessons"][0]["steps"][0]["sourceNote"]["unverified"]
+        with self.assertRaisesRegex(ValueError, "unverified source notes"):
+            lesson_payload(json.dumps(lesson))
+
     def test_browser_recomputes_visible_cues_and_has_no_private_history_by_default(self):
         payload = browser_payload(lesson_payload(self.raw), None)
         self.assertFalse(payload["hasLocalHistory"])

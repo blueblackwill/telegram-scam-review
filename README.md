@@ -6,18 +6,19 @@
 
 ## 玩本地防骗闯关
 
-下载或克隆后，用浏览器打开 [training.html](training.html)。页面不需要终端、服务器或联网。先选四步路线，按顺序完成合成操作。全部操作结束后再做复盘判断。
+下载或克隆后，用浏览器打开 [training.html](training.html)，选一条四步路线。纸舟课堂的红包会改变本地显示余额，后续提现停在提示处。商铺生成一个待支付的课堂订单，收银台继续显示同一订单的应付金额。完成操作后可进入证据复盘。页面离线运行，使用课堂点和虚构订单。
 
-每次操作后，浏览器用从 `rules.py` 生成的规则重新扫当前模拟证据。点选线索可定位原文字段，缺材料会标成待核。公开页面旁边是合成对照，操作只改变本地演练状态。
+每次操作后，浏览器用从 `rules.py` 生成的规则扫描当前模拟记录。点选线索可定位证据字段，缺材料会标成待核。右侧列出历史画面可见的文字、教学演练采用的解释和待核点。接入本机截图后，可直接对照这些画面。
 
-![操作优先实测画面（合成教学数据）](training/sample-screen.png)
+![课堂收银台实测画面（合成教学数据）](training/sample-screen.png)
 
-在 `training/lessons.json` 编辑关卡，页面结构在 `training/index.template.html`。
+`training/replay.js` 管理课堂红包和订单状态。`training/lessons.json` 保存八步证据，页面结构在 `training/index.template.html`。
 
 ```sh
 python3 -B build_training.py
 python3 -B build_training.py --check
 python3 -B -m unittest -v test_rules test_training test_training_bot
+node --test test_training_replay.js
 ```
 
 ### Telegram 教学消息和本机机器人

@@ -214,11 +214,53 @@
   @media(prefers-reduced-motion: no-preference) {
     .finding, .choice, .route { transition: background-color .15s, border-color .15s; }
   }
-  .operate-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 15px; }
-  .operate-controls .primary { min-height: 40px; padding: 9px 15px; }
+  .product-section { padding-top: 0; border-top: 0; }
+  .product-surface {
+    overflow: hidden; border: 1px solid #b9cbc2; border-radius: 13px; background: #f4f9f6;
+    box-shadow: 0 3px 9px #183e3310;
+  }
+  .product-bar {
+    background: #24483f; color: #f4fcf7; padding: 10px 15px;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .product-name { min-width: 0; font-size: 13px; font-weight: 800; }
+  .product-label {
+    border: 1px solid #7fafa0; color: #e0f6e9; border-radius: 4px;
+    padding: 3px 6px; font-size: 10px; font-weight: 750; white-space: nowrap;
+  }
+  .product-card { padding: 16px 15px; }
+  .product-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 10px; }
+  .product-title { font-size: 19px; line-height: 1.25; letter-spacing: -.02em; }
+  .product-status { padding: 4px 7px; background: #dfece3; color: #234e3e; }
+  .product-status[data-tone="notice"] { background: #faf0d8; color: #744b0e; }
+  .product-status[data-tone="blocked"] { background: #f8e7dc; color: #873f27; }
+  .product-description { margin-top: 5px; font-size: 12px; line-height: 1.6; color: #3e5a4d; }
+  .product-facts {
+    margin: 12px 0 0; border-top: 1px solid #d3e0d8; border-bottom: 1px solid #d3e0d8;
+  }
+  .product-pair {
+    padding: 7px 0; display: grid; grid-template-columns: minmax(64px, 1fr) minmax(0, 1.85fr);
+    gap: 8px; font-size: 12px; line-height: 1.45;
+  }
+  .product-pair + .product-pair { border-top: 1px solid #dce7de; }
+  .product-pair dt { color: #476357; }
+  .product-pair dd { color: #18392d; font-weight: 800; margin: 0; overflow-wrap: anywhere; }
+  .operate-controls {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    padding: 12px 15px; border-top: 1px solid #d7e4db; background: #eaf2eb;
+  }
+  .operate-controls .primary { min-height: 40px; padding: 9px 15px; white-space: normal; }
   .history { background: #f1f0e7; }
+  .source-notes { margin: 12px 0 0; display: grid; gap: 6px; }
+  .source-note {
+    border-left: 3px solid #8d9b77; padding: 6px 8px; background: #f9f9ef;
+    line-height: 1.55; font-size: 11.5px;
+  }
+  .source-note[data-kind="interpretation"] { border-color: #91a7a2; }
+  .source-note[data-kind="unverified"] { border-color: #b49151; }
+  .source-note dt { font-weight: 800; color: #384f41; }
+  .source-note dd { margin: 1px 0 0; color: #526057; overflow-wrap: anywhere; }
   .training-shot { background: #edf2e8; }
-  .training-shot[hidden] + .history { border-top: 0; }
   .history-badge { background: #e3e5dc; color: #45534b; }
   .history-note { color: var(--muted); font-size: 11.5px; line-height: 1.6; margin: 0 0 10px; }
   .history-figure { margin: 0; display: grid; gap: 7px; }
@@ -267,7 +309,7 @@
   <section class="intro">
     <h1 id="course-title">Telegram 防骗闯关</h1>
     <span class="badge">合成操作 · 历史对照</span>
-    <p>按顺序完成四次合成操作。每次点击都会更新记录和线索，路线跑完后再复盘。</p>
+    <p>在纸舟课堂走完两条操作路线。每步会改变本地练习记录，并和历史画面对照。</p>
   </section>
   <section id="boot-error" class="panel completion" role="alert" hidden>
     <h2>演练页尚未生成</h2>
@@ -284,12 +326,28 @@
         </div>
         <h2 id="step-title" class="step-title" data-testid="step-title" tabindex="-1"></h2>
         <p id="story" class="story"></p>
-        <div id="operate-controls" class="operate-controls">
-          <button type="button" class="primary" id="operate-step" data-testid="operate-step"></button>
-          <button type="button" class="primary" id="review-start" data-testid="review-start" hidden>进入复盘</button>
-          <p id="operation-status" class="section-hint" data-testid="operation-status" role="status"></p>
-        </div>
       </header>
+      <section class="section product-section" aria-labelledby="product-title">
+        <div class="product-surface" id="product-surface" data-testid="product-surface">
+          <div class="product-bar">
+            <p id="product-name" class="product-name"></p>
+            <span class="product-label">合成教学 · 本机</span>
+          </div>
+          <div class="product-card">
+            <div class="product-heading">
+              <h3 id="product-title" class="product-title" data-testid="product-title"></h3>
+              <span id="product-status" class="badge product-status" data-testid="product-status"></span>
+            </div>
+            <p id="product-description" class="product-description"></p>
+            <dl id="product-facts" class="product-facts" data-testid="product-facts"></dl>
+          </div>
+          <div id="operate-controls" class="operate-controls">
+            <button type="button" class="primary" id="operate-step" data-testid="operate-step"></button>
+            <button type="button" class="primary" id="review-start" data-testid="review-start" hidden>进入复盘</button>
+            <p id="operation-status" class="section-hint" data-testid="operation-status" role="status"></p>
+          </div>
+        </div>
+      </section>
       <section class="section" id="evidence-panel" aria-labelledby="evidence-title" hidden>
         <div class="section-head">
           <h3 class="section-title" id="evidence-title">合成证据条目</h3>
@@ -318,17 +376,6 @@
       </section>
     </article>
     <aside class="panel" aria-label="步骤画面对照">
-      <section class="section training-shot" id="telegram-panel" data-testid="telegram-panel" aria-labelledby="telegram-title" hidden>
-        <div class="section-head">
-          <h2 class="section-title" id="telegram-title">Telegram 实测</h2>
-          <span class="badge">模拟演练</span>
-        </div>
-        <figure class="history-figure">
-          <img id="telegram-image" data-testid="telegram-image" alt="" decoding="async" hidden>
-          <p id="telegram-fallback" class="history-fallback" hidden>本机实测截图未能显示。</p>
-          <figcaption id="telegram-reference" class="history-caption history-reference" data-testid="telegram-reference"></figcaption>
-        </figure>
-      </section>
       <section class="section history" id="history-panel" data-testid="history-panel" aria-labelledby="history-title">
         <div class="section-head">
           <h2 class="section-title" id="history-title">历史画面对照</h2>
@@ -344,6 +391,18 @@
           </figcaption>
         </figure>
         <p id="history-wait" class="history-fallback">完成一次操作后显示对应的对照材料。</p>
+        <dl id="source-notes" class="source-notes" data-testid="source-notes" hidden></dl>
+      </section>
+      <section class="section training-shot" id="telegram-panel" data-testid="telegram-panel" aria-labelledby="telegram-title" hidden>
+        <div class="section-head">
+          <h2 class="section-title" id="telegram-title">Telegram 教学发帖记录</h2>
+          <span class="badge">模拟演练</span>
+        </div>
+        <figure class="history-figure">
+          <img id="telegram-image" data-testid="telegram-image" alt="" decoding="async" hidden>
+          <p id="telegram-fallback" class="history-fallback" hidden>本机实测截图未能显示。</p>
+          <figcaption id="telegram-reference" class="history-caption history-reference" data-testid="telegram-reference"></figcaption>
+        </figure>
       </section>
     </aside>
   </div>
@@ -364,6 +423,7 @@
 <script id="training-data" type="application/json">__TRAINING_PAYLOAD__</script>
 <script>
 /*__TRAINING_DETECTOR__*/
+/*__TRAINING_REPLAY__*/
 </script>
 <script>
 (() => {
@@ -371,13 +431,23 @@
 
   const byId = (id) => document.getElementById(id);
   let course;
+  let tracks;
   try {
     course = JSON.parse(byId("training-data").textContent);
     if (!Array.isArray(course.lessons) || course.lessons.length === 0 ||
         course.lessons.some((lesson) => !Array.isArray(lesson.steps) || lesson.steps.length === 0) ||
-        typeof window.detectTrainingEvidence !== "function") {
+        typeof window.detectTrainingEvidence !== "function" ||
+        !window.trainingReplay) {
       throw new Error("Missing training runtime");
     }
+    tracks = course.lessons.map((lesson) => ({
+      phase: "operation",
+      view: 0,
+      product: window.trainingReplay.start(lesson.id),
+      runs: [],
+      answers: new Map(),
+      passed: new Set()
+    }));
   } catch (_) {
     byId("boot-error").hidden = false;
     byId("reset-training").disabled = true;
@@ -389,13 +459,7 @@
   const state = {
     lesson: 0,
     selectedFinding: null,
-    tracks: course.lessons.map(() => ({
-      phase: "operation",
-      view: 0,
-      runs: [],
-      answers: new Map(),
-      passed: new Set()
-    }))
+    tracks
   };
   const total = course.lessons.reduce((count, lesson) => count + lesson.steps.length, 0);
   const lessonNow = () => course.lessons[state.lesson];
@@ -546,6 +610,42 @@
     }));
   }
 
+  function renderProduct(product, run) {
+    const display = window.trainingReplay.view(product);
+    const status = byId("product-status");
+    byId("product-surface").dataset.step = run ? run.stepId : "";
+    byId("product-name").textContent = display.name;
+    byId("product-title").textContent = display.title;
+    byId("product-description").textContent = display.description;
+    status.textContent = display.status;
+    status.dataset.tone = display.tone;
+    byId("product-facts").replaceChildren(...display.rows.map(({ label, value }) => {
+      const pair = element("div", "product-pair");
+      pair.append(element("dt", "", label), element("dd", "", value));
+      return pair;
+    }));
+  }
+
+  function renderSourceNotes(note) {
+    const list = byId("source-notes");
+    list.hidden = !note;
+    if (!note) {
+      list.replaceChildren();
+      return;
+    }
+    const labels = {
+      observed: "画面可见",
+      interpretation: "教学推演",
+      unverified: "待核"
+    };
+    list.replaceChildren(...Object.entries(labels).map(([kind, label]) => {
+      const group = element("div", "source-note");
+      group.dataset.kind = kind;
+      group.append(element("dt", "", label), element("dd", "", note[kind]));
+      return group;
+    }));
+  }
+
   const isEmbeddedImage = (value) => typeof value === "string" &&
     /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(value);
 
@@ -669,12 +769,14 @@
     byId("mode-label").textContent = phaseLabel;
     byId("step-meta").textContent = "步骤 " + (track.view + 1) + " / " + lesson.steps.length;
     byId("step-title").textContent = step.title;
-    byId("story").textContent = run ? step.story : "点击当前操作，查看它生成的合成记录和对应的历史材料。";
+    byId("story").textContent = run ? step.story : "从下方练习界面开始，操作后可对照历史材料。";
     byId("evidence-panel").hidden = !run;
     byId("ledger-panel").hidden = !run;
+    renderProduct(run ? run.product : track.product, run);
     renderOperation(track, lesson);
     renderTelegram(run ? step.telegram : null);
     renderHistory(run ? step.history : null);
+    renderSourceNotes(run ? step.sourceNote : null);
     renderEvidence(run ? run.evidence : []);
     renderLedger(run ? run.ledger : []);
     renderFindings(run);
@@ -691,18 +793,25 @@
     }
   }
 
-  function execute(step) {
+  function execute(step, previous) {
     const findings = window.detectTrainingEvidence(step.evidence, course.detector);
     const gaps = (step.missing || []).map((item) => ({
       ...item, status: "pending", grade: "E0", row: null, method: "gap"
     }));
-    return { evidence: step.evidence, ledger: step.ledger, findings: findings.concat(gaps) };
+    return {
+      stepId: step.id,
+      product: window.trainingReplay.advance(previous, step.id),
+      evidence: step.evidence,
+      ledger: step.ledger,
+      findings: findings.concat(gaps)
+    };
   }
 
   function reset() {
-    for (const track of state.tracks) {
+    for (const [index, track] of state.tracks.entries()) {
       track.phase = "operation";
       track.view = 0;
+      track.product = window.trainingReplay.start(course.lessons[index].id);
       track.runs.length = 0;
       track.answers.clear();
       track.passed.clear();
@@ -723,9 +832,11 @@
     const index = track.runs.length;
     if (track.phase !== "operation" || index >= lesson.steps.length) return;
     try {
-      track.runs.push(execute(lesson.steps[index]));
+      const run = execute(lesson.steps[index], track.product);
+      track.runs.push(run);
+      track.product = run.product;
     } catch (_) {
-      byId("operation-status").textContent = "线索检测未完成。请检查本地构建后重试。";
+      byId("operation-status").textContent = "操作未完成。请检查本地构建后重试。";
       return;
     }
     track.view = index;
