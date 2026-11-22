@@ -6,11 +6,11 @@
 
 ## 玩本地防骗闯关
 
-下载或克隆后，用浏览器打开 [training.html](training.html)。打开文件即可练习。页面不需要终端、服务器或联网。左侧选择「红包与提现」或「商铺与付款」路线，每条四关。先判断该核对哪份证据，再看反馈和下一关。点击一条检测结果，可以定位到对应的合成证据行。
+下载或克隆后，用浏览器打开 [training.html](training.html)。页面不需要终端、服务器或联网。先选四步路线，按顺序完成合成操作。全部操作结束后再做复盘判断。
 
-每关的检测结果由现有的 \`rules.py\` 根据合成证据生成。证据缺失条目单列待核。页面使用独立的教学布局和固定假数据，所有点击只改变本地练习进度。
+每次操作后，浏览器用从 `rules.py` 生成的规则重新扫当前模拟证据。点选线索可定位原文字段，缺材料会标成待核。公开页面旁边是合成对照，操作只改变本地演练状态。
 
-![授权关实测画面（合成教学数据）](training/sample-screen.png)
+![操作优先实测画面（合成教学数据）](training/sample-screen.png)
 
 要改练习内容，在 \`training/lessons.json\` 编辑关卡。页面结构在 \`training/index.template.html\`。生成和复核命令如下：
 
@@ -19,6 +19,16 @@ python3 -B build_training.py
 python3 -B build_training.py --check
 python3 -B -m unittest -v test_rules test_training
 \`\`\`
+
+### 本地历史截图对照
+
+构建器支持 `--history`，公开版即使没有原图也能完整练习。历史清单是以关卡 ID 为键、已脱敏本地 PNG/JPEG 路径为值的 JSON。清单要包含 `training/lessons.json` 里的八个关卡 ID。路径相对于清单文件。命令示例：
+
+```sh
+python3 -B build_training.py --history /path/to/local-history.json --output /path/to/local-walkthrough.html
+```
+
+生成的本机页在对应关卡旁嵌入原截图。构建器要求带历史截图的页面写到 Git 工作区之外。请仅在已获授权时整理、保存这些材料，真实截图和本机产物保持本地。
 
 ## 运行教学样例
 

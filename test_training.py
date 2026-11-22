@@ -1,7 +1,9 @@
 """Guard the public teaching data and keep the downloadable page reproducible."""
 import unittest
 
-from build_training import LESSONS, ROOT, compiled_html, lesson_payload
+from build_training import (
+    LESSONS, ROOT, browser_payload, compiled_html, history_image, lesson_payload,
+)
 
 
 class TrainingTests(unittest.TestCase):
@@ -34,6 +36,20 @@ class TrainingTests(unittest.TestCase):
     def test_public_teaching_data_rejects_live_pointers(self):
         with self.assertRaisesRegex(ValueError, "live links"):
             lesson_payload(self.raw.replace('\"title\":', '\"external\":\"https://example.invalid\",\"title\":', 1))
+
+    def test_browser_recomputes_visible_cues_and_has_no_private_history_by_default(self):
+        payload = browser_payload(lesson_payload(self.raw), None)
+        self.assertFalse(payload["hasLocalHistory"])
+        self.assertTrue(payload["detector"]["rules"])
+        for route in payload["lessons"]:
+            for stage in route["steps"]:
+                self.assertNotIn("findings", stage)
+                self.assertNotIn("image", stage["history"])
+
+    def test_screenshot_embedding_validates_image_type(self):
+        self.assertTrue(history_image(ROOT / "demo.png").startswith("data:image/png;base64,"))
+        with self.assertRaisesRegex(ValueError, "PNG 或 JPEG"):
+            history_image(ROOT / "demo.json")
 
     def test_downloadable_page_matches_source(self):
         published = (ROOT / "training.html").read_text(encoding="utf-8")

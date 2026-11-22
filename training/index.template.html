@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; connect-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>Telegram 防骗闯关</title>
 <style>
   :root {
@@ -214,6 +214,32 @@
   @media(prefers-reduced-motion: no-preference) {
     .finding, .choice, .route { transition: background-color .15s, border-color .15s; }
   }
+  .operate-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 15px; }
+  .operate-controls .primary { min-height: 40px; padding: 9px 15px; }
+  .history { background: #f1f0e7; }
+  .history-badge { background: #e3e5dc; color: #45534b; }
+  .history-note { color: var(--muted); font-size: 11.5px; line-height: 1.6; margin: 0 0 10px; }
+  .history-figure { margin: 0; display: grid; gap: 7px; }
+  .history img {
+    display: block; width: 100%; max-height: min(440px, 65vh); height: auto; object-fit: contain;
+    background: #e9e9e0; border: 1px solid #dcded0; border-radius: 8px;
+  }
+  .history-fallback {
+    padding: 11px 12px; border: 1px dashed #c2c7b7; border-radius: 8px; margin: 0;
+    background: #f8f8ef; font-size: 12px; line-height: 1.6;
+  }
+  .history-caption { display: grid; gap: 3px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  .history-reference { font-weight: 750; color: var(--ink); }
+  .progress-meta { display: grid; gap: 1px; }
+  .progress-meta .progress-text { margin: 0; display: flex; align-items: baseline; justify-content: space-between; }
+  .progress-meta .progress-text strong { margin-left: 11px; font-size: 14px; }
+  .route-count { font-size: 11px; }
+  .step-pill span:last-child, .route-count { overflow-wrap: anywhere; }
+  @media(max-width: 710px) {
+    .progress-meta .progress-text { font-size: 9px; }
+    .progress-meta .progress-text strong { font-size: 11px; margin-left: 5px; }
+    .route-count { white-space: normal; }
+  }
 </style>
 </head>
 <body>
@@ -225,60 +251,84 @@
       <p class="brand-note">本地教学 · 合成证据</p>
     </div>
     <div class="top-actions">
-      <p class="progress-text">已通过 <strong data-testid="progress-count" id="progress-count" aria-live="polite"></strong></p>
+      <div class="progress-meta">
+        <p class="progress-text">操作 <strong data-testid="operations-count" id="operations-count"></strong></p>
+        <p class="progress-text">复盘 <strong data-testid="progress-count" id="progress-count" aria-live="polite"></strong></p>
+      </div>
       <button type="button" class="reset" data-testid="reset-training" id="reset-training">重新开始</button>
     </div>
   </div>
 </header>
-<main class="frame" data-testid="training-app">
+<main class="frame" data-testid="training-app" id="training-app">
   <section class="intro">
     <h1 id="course-title">Telegram 防骗闯关</h1>
-    <span class="badge">合成样例</span>
-    <p>沿两条路线拆解消息、订单和权限。每一步选择能支持结论的凭证。</p>
+    <span class="badge">合成操作 · 历史对照</span>
+    <p>按顺序完成四次合成操作。每次点击都会更新记录和线索，路线跑完后再复盘。</p>
   </section>
   <section id="boot-error" class="panel completion" role="alert" hidden>
-    <h2>演练数据未生成</h2>
-    <p>请按仓库 README 生成完整的离线教学页，再打开生成的文件。</p>
+    <h2>演练页尚未生成</h2>
+    <p>按仓库 README 生成离线教学页，再打开生成的文件。</p>
   </section>
   <nav id="routes" class="routes" aria-label="教学路线"></nav>
-  <nav id="timeline" class="timeline" aria-label="当前路线关卡"></nav>
+  <nav id="timeline" class="timeline" aria-label="本路线的操作顺序" data-testid="operation-list"></nav>
   <div id="workbench" class="workbench" hidden>
-    <article class="panel">
+    <article class="panel" aria-label="本地合成操作">
       <header class="section">
         <div class="step-header">
           <p id="step-meta" class="step-meta"></p>
-          <span class="badge">本关情景</span>
+          <span class="badge" id="mode-label" data-testid="mode-label"></span>
         </div>
         <h2 id="step-title" class="step-title" data-testid="step-title" tabindex="-1"></h2>
         <p id="story" class="story"></p>
+        <div id="operate-controls" class="operate-controls">
+          <button type="button" class="primary" id="operate-step" data-testid="operate-step"></button>
+          <button type="button" class="primary" id="review-start" data-testid="review-start" hidden>进入复盘</button>
+          <p id="operation-status" class="section-hint" data-testid="operation-status" role="status"></p>
+        </div>
       </header>
-      <section class="section" aria-labelledby="evidence-title">
+      <section class="section" id="evidence-panel" aria-labelledby="evidence-title" hidden>
         <div class="section-head">
           <h3 class="section-title" id="evidence-title">合成证据条目</h3>
-          <p class="section-hint">点右侧线索可定位</p>
+          <p class="section-hint">选择一条线索可定位</p>
         </div>
         <ol class="evidence" id="evidence"></ol>
       </section>
-      <section class="section" aria-labelledby="question">
+      <section class="section" aria-labelledby="detector-title">
+        <h2 class="detector-title" id="detector-title">线索检测</h2>
+        <p class="detector-subtitle">E1 是文本线索。E0 表示缺少能验证结论的材料。</p>
+        <div class="findings" id="findings" data-testid="findings"></div>
+        <p class="location" id="finding-location" data-testid="finding-location" aria-live="polite"></p>
+      </section>
+      <section class="section" id="ledger-panel" aria-labelledby="ledger-title" hidden>
+        <h3 class="section-title" id="ledger-title">三层证据 · 合成记录</h3>
+        <dl class="ledger" id="ledger" data-testid="ledger"></dl>
+      </section>
+      <section class="section" id="decision-panel" aria-labelledby="question" data-testid="decision-panel" hidden>
         <h3 id="question" class="question"></h3>
         <div class="choices" id="choices" role="group" aria-labelledby="question"></div>
-        <div class="answer" id="answer-feedback" data-testid="answer-feedback" role="status" aria-live="polite" tabindex="-1" hidden></div>
+        <div class="answer" id="answer-feedback" data-testid="answer-feedback" role="status" tabindex="-1" hidden></div>
         <div class="decision-footer">
           <p class="takeaway" id="takeaway"></p>
-          <button type="button" class="primary" id="next-step" data-testid="next-step" disabled>下一关</button>
+          <button type="button" class="primary" id="next-step" data-testid="next-step" disabled>下一题</button>
         </div>
       </section>
     </article>
-    <aside class="panel" aria-label="风险与证据状态">
-      <section class="section">
-        <h2 class="detector-title">线索检测</h2>
-        <p class="detector-subtitle">E1 表示文本可见或尚待确认。E0 表示缺少能验证结论的材料。</p>
-        <div class="findings" id="findings"></div>
-        <p class="location" id="finding-location" data-testid="finding-location" aria-live="polite">选择一条线索，查看它的位置或需要补的材料。</p>
-      </section>
-      <section class="section" aria-labelledby="ledger-title">
-        <h3 class="section-title" id="ledger-title">三层证据 · 合成记录</h3>
-        <dl class="ledger" id="ledger"></dl>
+    <aside class="panel" aria-label="历史画面对照">
+      <section class="section history" id="history-panel" data-testid="history-panel" aria-labelledby="history-title">
+        <div class="section-head">
+          <h2 class="section-title" id="history-title">历史画面对照</h2>
+          <span class="badge history-badge" id="history-badge"></span>
+        </div>
+        <p class="history-note">对照画面用于找可见线索，检测器读取左栏的合成证据。</p>
+        <figure class="history-figure" id="history-figure" hidden>
+          <img id="history-image" data-testid="history-image" alt="该步骤的历史材料截图" decoding="async" hidden>
+          <p id="history-fallback" class="history-fallback" data-testid="history-fallback"></p>
+          <figcaption class="history-caption">
+            <span class="history-reference" id="history-reference" data-testid="history-reference"></span>
+            <span id="history-caption"></span>
+          </figcaption>
+        </figure>
+        <p id="history-wait" class="history-fallback">完成一次操作后显示对应的对照材料。</p>
       </section>
     </aside>
   </div>
@@ -291,9 +341,12 @@
       <button type="button" class="quiet" id="review-route" data-testid="review-route">回看本路线</button>
     </div>
   </section>
-  <p class="endnote">观察到的文本、钱包权限和资金流水各有自己的证据。完成进度只记录你在这次演练里的判断。</p>
+  <p class="endnote">画面文字、钱包权限和资金流水各有对应的凭证。进度只记录本次演练。</p>
 </main>
 <script id="training-data" type="application/json">__TRAINING_PAYLOAD__</script>
+<script>
+/*__TRAINING_DETECTOR__*/
+</script>
 <script>
 (() => {
   "use strict";
@@ -303,8 +356,9 @@
   try {
     course = JSON.parse(byId("training-data").textContent);
     if (!Array.isArray(course.lessons) || course.lessons.length === 0 ||
-        course.lessons.some((lesson) => !Array.isArray(lesson.steps) || lesson.steps.length === 0)) {
-      throw new Error("Missing lessons");
+        course.lessons.some((lesson) => !Array.isArray(lesson.steps) || lesson.steps.length === 0) ||
+        typeof window.detectTrainingEvidence !== "function") {
+      throw new Error("Missing training runtime");
     }
   } catch (_) {
     byId("boot-error").hidden = false;
@@ -312,26 +366,24 @@
     return;
   }
 
-  const categories = {
-    bot: "机器人",
-    link: "外链",
-    payment: "付款",
-    approval: "授权"
-  };
+  const categories = { bot: "机器人", link: "外链", payment: "付款", approval: "授权" };
+  const phaseLabels = { operation: "合成操作", review: "复盘答题", complete: "复盘完成" };
   const state = {
     lesson: 0,
-    step: 0,
-    completion: false,
     selectedFinding: null,
-    answers: new Map(),
-    passed: new Set()
+    tracks: course.lessons.map(() => ({
+      phase: "operation",
+      view: 0,
+      runs: [],
+      answers: new Map(),
+      passed: new Set()
+    }))
   };
   const total = course.lessons.reduce((count, lesson) => count + lesson.steps.length, 0);
   const lessonNow = () => course.lessons[state.lesson];
-  const stepNow = () => lessonNow().steps[state.step];
-  const stepKey = (lesson, step) => lesson.id + "/" + step.id;
-  const currentKey = () => stepKey(lessonNow(), stepNow());
-  const isPassed = (lesson, step) => state.passed.has(stepKey(lesson, step));
+  const trackNow = () => state.tracks[state.lesson];
+  const totalRuns = () => state.tracks.reduce((count, track) => count + track.runs.length, 0);
+  const totalPassed = () => state.tracks.reduce((count, track) => count + track.passed.size, 0);
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -347,53 +399,65 @@
     return node;
   }
 
-  function gotoStep(lesson, step) {
-    state.lesson = lesson;
-    state.step = step;
-    state.completion = false;
+  function showStep(index) {
+    trackNow().view = index;
     state.selectedFinding = null;
     render();
     byId("step-title").focus();
   }
 
-  function firstOpenStep(lesson) {
-    const index = lesson.steps.findIndex((step) => !isPassed(lesson, step));
-    return index === -1 ? 0 : index;
+  function selectRoute(index) {
+    state.lesson = index;
+    state.selectedFinding = null;
+    render();
+    const heading = trackNow().phase === "complete" ? "complete-title" : "step-title";
+    byId(heading).focus();
   }
 
   function renderRoutes() {
-    byId("progress-count").textContent = state.passed.size + " / " + total;
+    byId("operations-count").textContent = totalRuns() + " / " + total;
+    byId("progress-count").textContent = totalPassed() + " / " + total;
     byId("routes").replaceChildren(...course.lessons.map((lesson, index) => {
+      const track = state.tracks[index];
       const node = button("route", "lesson-select");
       node.dataset.lesson = lesson.id;
       node.setAttribute("aria-pressed", String(index === state.lesson));
       const description = element("span");
       description.append(element("span", "route-title", lesson.title), element("span", "route-subtitle", lesson.subtitle));
-      const count = lesson.steps.filter((step) => isPassed(lesson, step)).length;
-      node.append(description, element("span", "route-count", count + "/" + lesson.steps.length));
-      node.addEventListener("click", () => gotoStep(index, firstOpenStep(lesson)));
+      const count = track.phase === "operation" ? track.runs.length : track.passed.size;
+      const badge = element("span", "route-count", phaseLabels[track.phase] + " " + count + "/" + lesson.steps.length);
+      node.append(description, badge);
+      node.addEventListener("click", () => selectRoute(index));
       return node;
     }));
   }
 
   function renderTimeline() {
     const lesson = lessonNow();
-    byId("timeline").style.setProperty("--steps", lesson.steps.length);
-    byId("timeline").replaceChildren(...lesson.steps.map((step, index) => {
+    const track = trackNow();
+    const operation = track.phase === "operation";
+    const list = byId("timeline");
+    list.style.setProperty("--steps", lesson.steps.length);
+    list.setAttribute("aria-label", operation ? "本路线的操作顺序" : "本路线的复盘顺序");
+    list.replaceChildren(...lesson.steps.map((step, index) => {
       const node = button("step-pill", "step-select");
       node.dataset.step = step.id;
-      const passed = isPassed(lesson, step);
-      node.dataset.complete = String(passed);
-      node.disabled = index > 0 && !isPassed(lesson, lesson.steps[index - 1]);
-      if (!state.completion && index === state.step) node.setAttribute("aria-current", "step");
-      node.append(element("span", "step-number", passed ? "✓" : index + 1), element("span", "", step.title));
-      node.addEventListener("click", () => gotoStep(state.lesson, index));
+      const done = operation ? index < track.runs.length : track.passed.has(index);
+      node.dataset.complete = String(done);
+      node.disabled = operation ? !done : (index > 0 && !track.passed.has(index - 1));
+      if (track.phase !== "complete" && index === track.view) node.setAttribute("aria-current", "step");
+      const label = operation ? step.action : step.title;
+      node.append(element("span", "step-number", done ? "✓" : index + 1), element("span", "", label));
+      node.addEventListener("click", () => {
+        if (track.phase === "complete") track.phase = "review";
+        showStep(index);
+      });
       return node;
     }));
   }
 
-  function renderEvidence(step) {
-    byId("evidence").replaceChildren(...step.evidence.map((row, index) => {
+  function renderEvidence(rows) {
+    byId("evidence").replaceChildren(...rows.map((row, index) => {
       const node = element("li");
       node.dataset.testid = "evidence-row";
       node.dataset.row = String(index);
@@ -407,11 +471,10 @@
     }));
   }
 
-  function updateFinding(step) {
+  function updateFinding(run) {
     const active = state.selectedFinding;
-    const finding = active === null ? null : step.findings[active];
-    const row = finding && Number.isInteger(finding.row) && step.evidence[finding.row]
-      ? finding.row : null;
+    const finding = active === null ? null : run.findings[active];
+    const row = finding && Number.isInteger(finding.row) && run.evidence[finding.row] ? finding.row : null;
     byId("evidence").querySelectorAll("[data-row]").forEach((node) => {
       node.dataset.active = String(row !== null && Number(node.dataset.row) === row);
     });
@@ -420,66 +483,93 @@
     });
     if (!finding) {
       byId("finding-location").textContent = "选择一条线索，查看它的位置或需要补的材料。";
-      return;
-    }
-    if (row === null) {
+    } else if (row !== null) {
+      byId("finding-location").textContent = "已定位第 " + (row + 1) + " 条 · " + run.evidence[row].label;
+    } else {
       const location = finding.status === "pending" ? "待核 · " : "没有对应文本行 · ";
       byId("finding-location").textContent = location + finding.summary;
-      return;
     }
-    byId("finding-location").textContent = "已定位第 " + (row + 1) + " 条 · " + step.evidence[row].label;
   }
 
-  function renderFindings(step) {
-    const nodes = step.findings.map((finding, index) => {
+  function renderFindings(run) {
+    if (!run) {
+      byId("findings").replaceChildren();
+      byId("finding-location").textContent = "每次点击操作都会在本机运行一次线索检测。";
+      return;
+    }
+    const nodes = run.findings.map((finding, index) => {
       const pending = finding.status === "pending";
       const node = button("finding", "finding");
       node.dataset.category = finding.category;
       node.dataset.status = finding.status;
-      node.dataset.row = finding.row === null ? "" : String(finding.row);
+      node.dataset.row = finding.row == null ? "" : String(finding.row);
       const top = element("span", "finding-top");
       top.append(
         element("span", "badge" + (pending ? " pending" : ""), pending ? "待核" : "可见线索"),
         element("span", "grade", (categories[finding.category] || "线索") + " · " + finding.grade)
       );
-      node.append(
-        top,
-        element("span", "finding-title", finding.title),
-        element("span", "finding-summary", finding.summary)
-      );
+      node.append(top, element("span", "finding-title", finding.title), element("span", "finding-summary", finding.summary));
       node.addEventListener("click", () => {
         state.selectedFinding = index;
-        updateFinding(step);
+        updateFinding(run);
       });
       return node;
     });
-    if (nodes.length === 0) nodes.push(element("p", "section-hint", "这一关暂未提取到已标记的线索。"));
+    if (nodes.length === 0) nodes.push(element("p", "section-hint", "本次检测没有标出可见线索。"));
     byId("findings").replaceChildren(...nodes);
-    updateFinding(step);
+    updateFinding(run);
   }
 
-  function renderLedger(step) {
-    byId("ledger").replaceChildren(...step.ledger.map((row) => {
+  function renderLedger(rows) {
+    byId("ledger").replaceChildren(...rows.map((row) => {
       const pair = element("div", "ledger-pair");
       pair.append(element("dt", "", row.label), element("dd", "", row.value));
       return pair;
     }));
   }
 
+  function renderHistory(history) {
+    const image = byId("history-image");
+    const fallback = byId("history-fallback");
+    byId("history-wait").hidden = !!history;
+    byId("history-figure").hidden = !history;
+    if (!history) {
+      image.hidden = true;
+      image.removeAttribute("src");
+      byId("history-badge").textContent = "等待操作";
+      return;
+    }
+    const hasImage = typeof history.image === "string" &&
+      /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(history.image);
+    byId("history-badge").textContent = hasImage ? "本机历史材料" : "合成对照";
+    byId("history-reference").textContent = history.reference;
+    byId("history-caption").textContent = history.caption;
+    fallback.textContent = history.fallback;
+    fallback.hidden = hasImage;
+    image.hidden = !hasImage;
+    if (hasImage) {
+      image.alt = "历史材料截图 · " + history.reference;
+      image.src = history.image;
+    } else {
+      image.removeAttribute("src");
+    }
+  }
+
   function renderDecision(step) {
-    const key = currentKey();
-    const lastChoice = state.answers.get(key);
-    const passed = state.passed.has(key);
+    const track = trackNow();
+    const index = track.view;
+    const lastChoice = track.answers.get(index);
+    const passed = track.passed.has(index);
     byId("question").textContent = step.question;
-    byId("choices").replaceChildren(...step.choices.map((choice, index) => {
+    byId("choices").replaceChildren(...step.choices.map((choice, choiceIndex) => {
       const node = button("choice", "choice");
       node.dataset.choice = choice.id;
       node.disabled = passed;
       if (lastChoice === choice) node.dataset.result = choice.correct ? "right" : "wrong";
-      node.append(element("span", "choice-icon", String.fromCharCode(65 + index)), element("span", "", choice.label));
+      node.append(element("span", "choice-icon", String.fromCharCode(65 + choiceIndex)), element("span", "", choice.label));
       node.addEventListener("click", () => {
-        state.answers.set(key, choice);
-        if (choice.correct) state.passed.add(key);
+        track.answers.set(index, choice);
+        if (choice.correct) track.passed.add(index);
         renderRoutes();
         renderTimeline();
         renderDecision(step);
@@ -496,63 +586,143 @@
         element("p", "", lastChoice.feedback)
       );
     }
-    byId("takeaway").textContent = passed ? step.takeaway : "选对凭证后解锁下一关。";
+    byId("takeaway").textContent = passed ? step.takeaway : "选对凭证后继续复盘。";
     byId("next-step").disabled = !passed;
-    byId("next-step").textContent = state.step + 1 < lessonNow().steps.length ? "下一关" : "查看结果";
+    byId("next-step").textContent = index + 1 < lessonNow().steps.length ? "下一题" : "查看结果";
   }
 
   function renderCompletion() {
-    const allPassed = state.passed.size === total;
+    const allPassed = totalPassed() === total;
     byId("complete-badge").textContent = allPassed ? "全部完成" : "路线通过";
     byId("complete-title").textContent = allPassed ? "两条路线全部通过" : lessonNow().title + "已完成";
     byId("complete-body").textContent = allPassed
-      ? "你已核对完全部 " + total + " 个关卡。回看任一路线，复查可见线索与仍需独立凭证的结论。"
-      : "已完成这条路线。下一条路线从不同的消息入口出发，继续练习核对权限和流水。";
+      ? "你完成了 " + total + " 次合成操作及对应的证据判断。可以回看任一路线。"
+      : "你完成了这条路线的操作和复盘，可以继续另一条路线。";
     byId("continue-route").textContent = allPassed ? "再练一遍" : "进入另一条路线";
   }
 
+  function renderOperation(track, lesson) {
+    const isOperation = track.phase === "operation";
+    const next = lesson.steps[track.runs.length];
+    byId("operate-controls").hidden = !isOperation;
+    byId("operate-step").hidden = !next;
+    byId("review-start").hidden = !!next;
+    if (next) byId("operate-step").textContent = next.action;
+    const run = track.runs[track.view];
+    const progress = "已完成 " + track.runs.length + "/" + lesson.steps.length + " 次操作";
+    const findingsCount = run ? " · 本步 " + run.findings.length + " 条线索" : "";
+    byId("operation-status").textContent = next
+      ? progress + findingsCount
+      : "全部操作已完成" + findingsCount + " · 可以开始复盘";
+  }
+
   function render() {
+    const track = trackNow();
+    const lesson = lessonNow();
+    byId("training-app").dataset.phase = track.phase;
     renderRoutes();
     renderTimeline();
-    byId("workbench").hidden = state.completion;
-    byId("completion").hidden = !state.completion;
-    if (state.completion) {
+    byId("workbench").hidden = track.phase === "complete";
+    byId("completion").hidden = track.phase !== "complete";
+    if (track.phase === "complete") {
       renderCompletion();
       return;
     }
-    const step = stepNow();
-    byId("step-meta").textContent = "第 " + (state.step + 1) + " 关／共 " + lessonNow().steps.length + " 关";
+    const step = lesson.steps[track.view];
+    const run = track.runs[track.view];
+    const phaseLabel = phaseLabels[track.phase];
+    byId("mode-label").textContent = phaseLabel;
+    byId("step-meta").textContent = "步骤 " + (track.view + 1) + " / " + lesson.steps.length;
     byId("step-title").textContent = step.title;
-    byId("story").textContent = step.story;
-    renderEvidence(step);
-    renderFindings(step);
-    renderLedger(step);
-    renderDecision(step);
+    byId("story").textContent = run ? step.story : "点击当前操作，查看它生成的合成记录和对应的历史材料。";
+    byId("evidence-panel").hidden = !run;
+    byId("ledger-panel").hidden = !run;
+    renderOperation(track, lesson);
+    renderHistory(run ? step.history : null);
+    renderEvidence(run ? run.evidence : []);
+    renderLedger(run ? run.ledger : []);
+    renderFindings(run);
+    const review = track.phase === "review";
+    byId("decision-panel").hidden = !review;
+    if (review) {
+      renderDecision(step);
+    } else {
+      byId("question").textContent = "";
+      byId("choices").replaceChildren();
+      byId("answer-feedback").hidden = true;
+      byId("answer-feedback").replaceChildren();
+      byId("next-step").disabled = true;
+    }
+  }
+
+  function execute(step) {
+    const findings = window.detectTrainingEvidence(step.evidence, course.detector);
+    const gaps = (step.missing || []).map((item) => ({
+      ...item, status: "pending", grade: "E0", row: null, method: "gap"
+    }));
+    return { evidence: step.evidence, ledger: step.ledger, findings: findings.concat(gaps) };
   }
 
   function reset() {
-    state.answers.clear();
-    state.passed.clear();
-    gotoStep(0, 0);
+    for (const track of state.tracks) {
+      track.phase = "operation";
+      track.view = 0;
+      track.runs.length = 0;
+      track.answers.clear();
+      track.passed.clear();
+    }
+    selectRoute(0);
   }
 
   byId("course-title").textContent = course.title;
   byId("reset-training").addEventListener("click", reset);
-  byId("next-step").addEventListener("click", () => {
-    if (!state.passed.has(currentKey())) return;
-    if (state.step + 1 < lessonNow().steps.length) {
-      gotoStep(state.lesson, state.step + 1);
+  byId("operate-step").addEventListener("click", () => {
+    const track = trackNow();
+    const lesson = lessonNow();
+    const index = track.runs.length;
+    if (track.phase !== "operation" || index >= lesson.steps.length) return;
+    try {
+      track.runs.push(execute(lesson.steps[index]));
+    } catch (_) {
+      byId("operation-status").textContent = "线索检测未完成。请检查本地构建后重试。";
       return;
     }
-    state.completion = true;
+    track.view = index;
+    state.selectedFinding = null;
+    render();
+    if (track.runs.length === lesson.steps.length) byId("review-start").focus();
+  });
+  byId("review-start").addEventListener("click", () => {
+    const track = trackNow();
+    if (track.phase !== "operation" || track.runs.length !== lessonNow().steps.length) return;
+    track.phase = "review";
+    showStep(0);
+  });
+  byId("next-step").addEventListener("click", () => {
+    const track = trackNow();
+    if (track.phase !== "review" || !track.passed.has(track.view)) return;
+    if (track.view + 1 < lessonNow().steps.length) {
+      showStep(track.view + 1);
+      return;
+    }
+    track.phase = "complete";
     render();
     byId("complete-title").focus();
   });
-  byId("review-route").addEventListener("click", () => gotoStep(state.lesson, 0));
+  byId("review-route").addEventListener("click", () => {
+    trackNow().phase = "review";
+    showStep(0);
+  });
   byId("continue-route").addEventListener("click", () => {
-    const other = course.lessons.findIndex((lesson) => lesson.steps.some((step) => !isPassed(lesson, step)));
+    const other = state.tracks.findIndex((track, index) => track.passed.size < course.lessons[index].steps.length);
     if (other === -1) reset();
-    else gotoStep(other, firstOpenStep(course.lessons[other]));
+    else selectRoute(other);
+  });
+  byId("history-image").addEventListener("error", () => {
+    if (byId("history-image").hidden) return;
+    byId("history-image").hidden = true;
+    byId("history-fallback").hidden = false;
+    byId("history-badge").textContent = "合成对照";
   });
   render();
 })();

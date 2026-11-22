@@ -167,10 +167,14 @@ def _valid_box(value):
     return [left, top, min(1.0, x + width) - left, min(1.0, y + height) - top]
 
 
+EXACT_LABELS = {"authorization_text": frozenset({"授权", "授權", "已授权", "已授權"})}
+NEGATED_PREFIXES = {"payment_success_claim": ("未支付", "未付款", "未成功")}
+
+
 def _match(rule_item, spaced, compact):
-    if rule_item.key == "authorization_text" and compact in {"授权", "授權", "已授权", "已授權"}:
+    if compact in EXACT_LABELS.get(rule_item.key, ()):
         return True
-    if rule_item.key == "payment_success_claim" and compact.startswith(("未支付", "未付款", "未成功")):
+    if compact.startswith(NEGATED_PREFIXES.get(rule_item.key, ())):
         return False
     if rule_item.english is not None and rule_item.english.search(spaced):
         return True
