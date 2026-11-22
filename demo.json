@@ -1,0 +1,24 @@
+{
+  "title": "合成教学样例 · Telegram 防骗复核",
+  "mode": "synthetic",
+  "sources": [
+    {
+      "id": "training",
+      "kind": "image",
+      "path": "demo.png",
+      "label": "自行绘制的模拟字段",
+      "reference": "合成教学样例，非真实商家或消息"
+    }
+  ],
+  "reviewed": [
+    {
+      "source_id": "training",
+      "category": "approval",
+      "status": "pending",
+      "grade": "E0",
+      "title": "是否真的获得授权仍待核",
+      "summary": "这张教学图说明付款与代币额度是两种线索。判断授权需要钱包实际确认和独立凭证。",
+      "box": null
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+.build/
+__pycache__/
+.local/
+*.pyc
+case*/
+results/
+findings.json
+report.html
+.DS_Store
