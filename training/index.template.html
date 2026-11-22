@@ -217,10 +217,12 @@
   .operate-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 15px; }
   .operate-controls .primary { min-height: 40px; padding: 9px 15px; }
   .history { background: #f1f0e7; }
+  .training-shot { background: #edf2e8; }
+  .training-shot[hidden] + .history { border-top: 0; }
   .history-badge { background: #e3e5dc; color: #45534b; }
   .history-note { color: var(--muted); font-size: 11.5px; line-height: 1.6; margin: 0 0 10px; }
   .history-figure { margin: 0; display: grid; gap: 7px; }
-  .history img {
+  .history img, .training-shot img {
     display: block; width: 100%; max-height: min(440px, 65vh); height: auto; object-fit: contain;
     background: #e9e9e0; border: 1px solid #dcded0; border-radius: 8px;
   }
@@ -230,6 +232,8 @@
   }
   .history-caption { display: grid; gap: 3px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
   .history-reference { font-weight: 750; color: var(--ink); }
+  .channel-link { color: var(--green); font-weight: 750; text-underline-offset: 3px; }
+  .channel-link:focus-visible { outline: 3px solid #8c721c; outline-offset: 3px; }
   .progress-meta { display: grid; gap: 1px; }
   .progress-meta .progress-text { margin: 0; display: flex; align-items: baseline; justify-content: space-between; }
   .progress-meta .progress-text strong { margin-left: 11px; font-size: 14px; }
@@ -313,7 +317,18 @@
         </div>
       </section>
     </article>
-    <aside class="panel" aria-label="历史画面对照">
+    <aside class="panel" aria-label="步骤画面对照">
+      <section class="section training-shot" id="telegram-panel" data-testid="telegram-panel" aria-labelledby="telegram-title" hidden>
+        <div class="section-head">
+          <h2 class="section-title" id="telegram-title">Telegram 实测</h2>
+          <span class="badge">模拟演练</span>
+        </div>
+        <figure class="history-figure">
+          <img id="telegram-image" data-testid="telegram-image" alt="" decoding="async" hidden>
+          <p id="telegram-fallback" class="history-fallback" hidden>本机实测截图未能显示。</p>
+          <figcaption id="telegram-reference" class="history-caption history-reference" data-testid="telegram-reference"></figcaption>
+        </figure>
+      </section>
       <section class="section history" id="history-panel" data-testid="history-panel" aria-labelledby="history-title">
         <div class="section-head">
           <h2 class="section-title" id="history-title">历史画面对照</h2>
@@ -341,7 +356,10 @@
       <button type="button" class="quiet" id="review-route" data-testid="review-route">回看本路线</button>
     </div>
   </section>
-  <p class="endnote">画面文字、钱包权限和资金流水各有对应的凭证。进度只记录本次演练。</p>
+  <p class="endnote">
+    画面文字、钱包权限和资金流水各有对应的凭证。进度只记录本次演练。
+    <a class="channel-link" id="telegram-channel" data-testid="telegram-channel" target="_blank" rel="noopener noreferrer" hidden>打开 Telegram 公开教学频道（新标签页）</a>
+  </p>
 </main>
 <script id="training-data" type="application/json">__TRAINING_PAYLOAD__</script>
 <script>
@@ -528,6 +546,24 @@
     }));
   }
 
+  const isEmbeddedImage = (value) => typeof value === "string" &&
+    /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(value);
+
+  function renderTelegram(telegram) {
+    const image = byId("telegram-image");
+    byId("telegram-panel").hidden = !telegram;
+    const hasImage = Boolean(telegram && isEmbeddedImage(telegram.image));
+    image.hidden = !hasImage;
+    byId("telegram-fallback").hidden = hasImage;
+    if (hasImage) {
+      image.alt = "Telegram 模拟演练截图 · " + telegram.reference;
+      image.src = telegram.image;
+    } else {
+      image.removeAttribute("src");
+    }
+    byId("telegram-reference").textContent = telegram ? telegram.reference : "";
+  }
+
   function renderHistory(history) {
     const image = byId("history-image");
     const fallback = byId("history-fallback");
@@ -539,8 +575,7 @@
       byId("history-badge").textContent = "等待操作";
       return;
     }
-    const hasImage = typeof history.image === "string" &&
-      /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(history.image);
+    const hasImage = isEmbeddedImage(history.image);
     byId("history-badge").textContent = hasImage ? "本机历史材料" : "合成对照";
     byId("history-reference").textContent = history.reference;
     byId("history-caption").textContent = history.caption;
@@ -638,6 +673,7 @@
     byId("evidence-panel").hidden = !run;
     byId("ledger-panel").hidden = !run;
     renderOperation(track, lesson);
+    renderTelegram(run ? step.telegram : null);
     renderHistory(run ? step.history : null);
     renderEvidence(run ? run.evidence : []);
     renderLedger(run ? run.ledger : []);
@@ -675,6 +711,11 @@
   }
 
   byId("course-title").textContent = course.title;
+  if (course.telegramChannel) {
+    const channel = byId("telegram-channel");
+    channel.href = course.telegramChannel;
+    channel.hidden = false;
+  }
   byId("reset-training").addEventListener("click", reset);
   byId("operate-step").addEventListener("click", () => {
     const track = trackNow();
@@ -723,6 +764,10 @@
     byId("history-image").hidden = true;
     byId("history-fallback").hidden = false;
     byId("history-badge").textContent = "合成对照";
+  });
+  byId("telegram-image").addEventListener("error", () => {
+    byId("telegram-image").hidden = true;
+    byId("telegram-fallback").hidden = false;
   });
   render();
 })();

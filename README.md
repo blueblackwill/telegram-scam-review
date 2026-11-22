@@ -12,15 +12,25 @@
 
 ![操作优先实测画面（合成教学数据）](training/sample-screen.png)
 
-要改练习内容，在 \`training/lessons.json\` 编辑关卡。页面结构在 \`training/index.template.html\`。生成和复核命令如下：
+在 `training/lessons.json` 编辑关卡，页面结构在 `training/index.template.html`。
 
-\`\`\`sh
+```sh
 python3 -B build_training.py
 python3 -B build_training.py --check
-python3 -B -m unittest -v test_rules test_training
-\`\`\`
+python3 -B -m unittest -v test_rules test_training test_training_bot
+```
 
-### 本地历史截图对照
+### Telegram 教学消息和本机机器人
+
+[纸舟课堂的八条模拟演练消息](training/telegram-posts.json)按关卡 ID 保存，覆盖红包、余额、提现、授权提示、订单、外链和付款。每条用练习点和虚构订单讲解如何核验一项线索。
+
+```sh
+python3 -B training_bot.py
+```
+
+选一条路线后，每按一次回车完成一步、增加一个课堂进度点，再显示对应的风险线索和待核项。也可附加 `--route gift` 或 `--route shop` 直接启动路线。机器人是终端内的离线教学程序。
+
+### 本地截图对照
 
 构建器支持 `--history`，公开版即使没有原图也能完整练习。历史清单是以关卡 ID 为键、已脱敏本地 PNG/JPEG 路径为值的 JSON。清单要包含 `training/lessons.json` 里的八个关卡 ID。路径相对于清单文件。命令示例：
 
@@ -29,6 +39,8 @@ python3 -B build_training.py --history /path/to/local-history.json --output /pat
 ```
 
 生成的本机页在对应关卡旁嵌入原截图。构建器要求带历史截图的页面写到 Git 工作区之外。请仅在已获授权时整理、保存这些材料，真实截图和本机产物保持本地。
+
+用 `--telegram /path/to/telegram-teaching.json` 加入自己的 Telegram 演练截图。该清单的八个关卡 ID 各对应一个 `{"file": "screens/step.jpg", "reference": "模拟演练 1/8 · 领红包"}` 对象，图片路径相对于清单文件。可同时使用 `--history`，每关会分别显示演练截图与案件历史画面。用 `--channel` 加入自己控制的公开 Telegram 频道主页链接，页面只会在用户点击时打开该链接。
 
 ## 运行教学样例
 

@@ -217,10 +217,12 @@
   .operate-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 15px; }
   .operate-controls .primary { min-height: 40px; padding: 9px 15px; }
   .history { background: #f1f0e7; }
+  .training-shot { background: #edf2e8; }
+  .training-shot[hidden] + .history { border-top: 0; }
   .history-badge { background: #e3e5dc; color: #45534b; }
   .history-note { color: var(--muted); font-size: 11.5px; line-height: 1.6; margin: 0 0 10px; }
   .history-figure { margin: 0; display: grid; gap: 7px; }
-  .history img {
+  .history img, .training-shot img {
     display: block; width: 100%; max-height: min(440px, 65vh); height: auto; object-fit: contain;
     background: #e9e9e0; border: 1px solid #dcded0; border-radius: 8px;
   }
@@ -230,6 +232,8 @@
   }
   .history-caption { display: grid; gap: 3px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
   .history-reference { font-weight: 750; color: var(--ink); }
+  .channel-link { color: var(--green); font-weight: 750; text-underline-offset: 3px; }
+  .channel-link:focus-visible { outline: 3px solid #8c721c; outline-offset: 3px; }
   .progress-meta { display: grid; gap: 1px; }
   .progress-meta .progress-text { margin: 0; display: flex; align-items: baseline; justify-content: space-between; }
   .progress-meta .progress-text strong { margin-left: 11px; font-size: 14px; }
@@ -313,7 +317,18 @@
         </div>
       </section>
     </article>
-    <aside class="panel" aria-label="历史画面对照">
+    <aside class="panel" aria-label="步骤画面对照">
+      <section class="section training-shot" id="telegram-panel" data-testid="telegram-panel" aria-labelledby="telegram-title" hidden>
+        <div class="section-head">
+          <h2 class="section-title" id="telegram-title">Telegram 实测</h2>
+          <span class="badge">模拟演练</span>
+        </div>
+        <figure class="history-figure">
+          <img id="telegram-image" data-testid="telegram-image" alt="" decoding="async" hidden>
+          <p id="telegram-fallback" class="history-fallback" hidden>本机实测截图未能显示。</p>
+          <figcaption id="telegram-reference" class="history-caption history-reference" data-testid="telegram-reference"></figcaption>
+        </figure>
+      </section>
       <section class="section history" id="history-panel" data-testid="history-panel" aria-labelledby="history-title">
         <div class="section-head">
           <h2 class="section-title" id="history-title">历史画面对照</h2>
@@ -341,7 +356,10 @@
       <button type="button" class="quiet" id="review-route" data-testid="review-route">回看本路线</button>
     </div>
   </section>
-  <p class="endnote">画面文字、钱包权限和资金流水各有对应的凭证。进度只记录本次演练。</p>
+  <p class="endnote">
+    画面文字、钱包权限和资金流水各有对应的凭证。进度只记录本次演练。
+    <a class="channel-link" id="telegram-channel" data-testid="telegram-channel" target="_blank" rel="noopener noreferrer" hidden>打开 Telegram 公开教学频道（新标签页）</a>
+  </p>
 </main>
 <script id="training-data" type="application/json">{"title":"Telegram 防骗闯关","lessons":[{"id":"gift","title":"红包与提现","subtitle":"仿 OKPay 手法 · 合成教学路径","steps":[{"id":"gift-message","title":"领红包","story":"先在课件里领取一笔模拟红包。操作后查看聊天卡片和到账记录，再判断这笔钱能不能计入账户。","ledger":[{"label":"模拟红包","value":"1.00 USDT（合成）"},{"label":"独立到账记录","value":"未提供"}],"evidence":[{"label":"消息类型","text":"机器人通知（合成）"},{"label":"卡片状态","text":"领取成功 · 1.00 USDT（合成）"}],"question":"判断红包有没有真的到账，哪份材料最有用？","choices":[{"id":"receipt","label":"自己账户里的到账流水","correct":true,"feedback":"对。卡片显示的是消息状态，独立账户流水才能查到钱有没有到。"},{"id":"claim","label":"卡片上的「领取成功」","correct":false,"feedback":"这行字只说明卡片这样写，可能与实际到账状态不同。"}],"takeaway":"把卡片文案和资金侧记录分开。","missing":[{"category":"payment","title":"红包到账待核","summary":"材料只有消息卡片，缺收款账户中独立取得的到账记录。"}],"action":"领取模拟红包","history":{"reference":"#342 · 钱包会话与转账卡片","caption":"原图显示钱包会话、转账卡片和收款按钮。到账仍待收款方的资金流水核对。","fallback":"合成对照｜卡片写着「可领取」，旁边的独立到账记录仍为空。"}},{"id":"gift-balance","title":"看余额","story":"打开模拟余额记录，看到页面额外列出一笔红包数字。把它和课堂设定的原钱包起始余额对照，再判断两处数字能不能相加。","ledger":[{"label":"聊天页显示的余额","value":"1.00 USDT（合成）"},{"label":"原钱包起始余额","value":"100.00 USDT（课堂假设）"}],"evidence":[{"label":"页面列账","text":"余额：1.00 USDT（合成）"},{"label":"数据出处","text":"聊天页面自报，暂无独立余额凭证"}],"question":"能把聊天页的 1.00 直接加到原钱包余额上吗？","choices":[{"id":"add","label":"可以，页面显示了余额","correct":false,"feedback":"两处数字的来源不同，直接相加会把页面自报当成真的入账。"},{"id":"separate","label":"先分别核对两处记录","correct":true,"feedback":"对。先查原钱包和平台各自的流水，再判断有没有一笔可对上的转入。"}],"takeaway":"余额是页面的一项展示，不能代替资金账单。","missing":[{"category":"payment","title":"这 1.00 是否计入账户待核","summary":"缺与领取时间、金额和收款方对应的独立流水。"}],"action":"查看模拟余额","history":{"reference":"#341 · 领取后余额演示图","caption":"发布者的演示画面显示领取后的余额字样。该数字来自页面显示，真实余额仍待独立账单核对。","fallback":"合成对照｜聊天页上的余额是一项页面显示，原账户起始金额是另一项课堂设定。"}},{"id":"gift-withdrawal","title":"查提现提示","story":"在课件里发起模拟提现，看看提现金额以后出现什么。你将检查页面提示，判断下一步会要求怎样的钱包动作。","ledger":[{"label":"提现申请","value":"1.00 USDT（合成）"},{"label":"钱包动作详情","value":"未提供"}],"evidence":[{"label":"表单字段","text":"提现金额：1.00 USDT（合成）"},{"label":"下一步提示","text":"绑定钱包（合成界面记录）"}],"question":"看到绑定提示后，应该先核查什么？","choices":[{"id":"prompt","label":"实际请求是连接、付款还是给额度","correct":true,"feedback":"对。提现是页面给动作起的名字，钱包实际要求你确认的内容还要单独看。"},{"id":"treat-as-payment","label":"按页面标题把它记成已提现","correct":false,"feedback":"这一步只显示了提现和绑定提示。材料里没有资金转出的记录。"}],"takeaway":"提现、连接钱包和代币额度各有不同的证据。","missing":[{"category":"approval","title":"钱包实际请求待核","summary":"没有钱包待签详情，连接、付款或代币额度都不能靠页面按钮定性。"}],"action":"发起模拟提现","history":{"reference":"#343 · 提现与钱包绑定画面","caption":"原图显示提现金额、钱包图标和绑定提示。实际请求内容需从钱包确认画面核对。","fallback":"合成对照｜提现申请旁出现绑定提示，实际钱包请求一栏仍为空。"}},{"id":"gift-allowance","title":"辨认额度","story":"展开课件里的授权提示，对照页面承诺可领的金额与摘录里写的额度。课堂材料只显示文字，之后由你判断还能确认哪些资金动作。","ledger":[{"label":"页面声称可领","value":"1.00 USDT（合成）"},{"label":"摘录中的额度","value":"100.00 USDT（课堂假设）"},{"label":"实际扣款凭证","value":"未提供"}],"evidence":[{"label":"摘录原句","text":"代币授权 · 授权额度 100.00 USDT（合成）"},{"label":"材料范围","text":"未提供钱包实际确认或独立转账凭证"}],"question":"页面里写了 100.00 的额度，能确认同样多的钱已经转出吗？","choices":[{"id":"assume-debit","label":"能，把额度当成已扣金额","correct":false,"feedback":"额度描述的是可被使用的权限范围，不能说明这笔钱已经移动。"},{"id":"check-separate","label":"把授权凭证和成功转账分别查","correct":true,"feedback":"对。先核授权的代币、额度和获准对象，再单独核对是否有成功转出。"}],"takeaway":"额度可能影响原钱包里的钱。实际授权和后续转账都要核对。","missing":[{"category":"approval","title":"额度是否实际授予待核","summary":"缺实际签名或额度变更回执，画面摘录只显示了相关字样。"}],"action":"查看模拟授权提示","history":{"reference":"#341 · 发布者自述授权的贴文","caption":"原帖以文字自述提现会发起授权，未展示钱包签名、实际额度或资金转出。","fallback":"合成对照｜材料出现「授权额度」四字，钱包签名和转账回执仍待补。"}}]},{"id":"shop","title":"商铺与订单","subtitle":"云上商铺手法 · 合成教学路径","steps":[{"id":"shop-order","title":"追订单来源","story":"先提交一笔课堂订单。页面随后展示一张合成订单卡，你再查机器人显示名、订单状态和内联署名分别指什么。","ledger":[{"label":"示例订单","value":"课堂订单（合成）"},{"label":"原始发送会话","value":"没有提供转发头"}],"evidence":[{"label":"会话标题","text":"课堂商铺 · 机器人（合成）"},{"label":"内联署名位置","text":"via"},{"label":"页面订单状态","text":"订单状态：待支付（合成）"}],"question":"订单卡片里的「via」直接告诉你什么？","choices":[{"id":"attribution","label":"它指向内容生成端，商家身份仍要核对","correct":true,"feedback":"对。内联署名、商铺本体和转发来源是不同字段。"},{"id":"merchant","label":"它已经证明了真正的卖家是谁","correct":false,"feedback":"生成订单卡的账号可能和商家不同。若想追原始会话，还要查原生转发头。"}],"takeaway":"名字看资料页，生成方看内联署名，转发来源另看原生转发头。","missing":[{"category":"bot","title":"商家和原始发单会话待核","summary":"合成卡片只有内联署名字段，没有商家资料页或原生转发头。"}],"action":"提交模拟订单","history":{"reference":"#297 00:39.000 · 买家订单画面","caption":"视频显示商铺会话里的订单详情与待支付状态。它把用户看到的订单定位到具体画面。","fallback":"合成对照｜订单记录已生成，订单状态留在「待支付」；商家身份由资料页另行核对。"}},{"id":"shop-link","title":"看外链确认","story":"查看合成记录中的外链确认。可以读出页面提示的目标文字，再判断它是不是商家独立公布的收银地址。","ledger":[{"label":"页面边界","value":"聊天 → 外部网页（模拟）"},{"label":"收银机构归属","value":"未提供独立凭证"}],"evidence":[{"label":"确认框标题","text":"打开链接（合成）"},{"label":"目标栏示例文字","text":"域名：orders.example.invalid"}],"question":"外链提示能说明什么？","choices":[{"id":"certified","label":"能证明页面是 Telegram 官方收银","correct":false,"feedback":"外链可以由聊天消息打开。提示本身没有验证外部服务是谁经营的。"},{"id":"compare","label":"能看到跳转提示，仍需核对独立公布的收银域","correct":true,"feedback":"对。合法商家也会用外链，比较具体目标与商家独立公布的域才有意义。"}],"takeaway":"外链本身是线索。关键是实际目标、独立公布的基准和支付方是否能对上。","missing":[{"category":"link","title":"目标和收银归属待核","summary":"示例目标只是一段不可点击的演练文字。真实取证要查页面完整主机名和独立确认的收银域。"}],"action":"查看外链确认","history":{"reference":"#297 02:27.083 · 外链确认","caption":"视频显示打开外链的确认提示。仅凭这个画面，收银域与商家的关系仍待核。","fallback":"合成对照｜从聊天进入浏览页面前，课件展示一条外链确认记录。归属待核。"}},{"id":"shop-payment","title":"查付款请求","story":"发起课堂模拟付款后，课件展示一份应付金额和支付请求。你将为当前订单标记状态，再决定哪份凭证才能证明实际扣款。","ledger":[{"label":"应付金额","value":"10.00 USDT（合成）"},{"label":"资金侧回执","value":"未提供"}],"evidence":[{"label":"页面标题","text":"支付中心（合成）"},{"label":"金额和状态","text":"待支付 · 10.00 USDT（合成）"},{"label":"说明文字","text":"打开钱包支付（合成界面摘要）"}],"question":"依据当前材料，应把这笔订单记成什么状态？","choices":[{"id":"request","label":"看到了付款请求，实际扣款待核","correct":true,"feedback":"对。判断是否付出，要回到买家自己的钱包、支付账户或独立交易回执。"},{"id":"settled","label":"有付款页就记为已经结算","correct":false,"feedback":"付款页正在请求付钱。金额、按钮和所选方式都不能表明钱已经转出。"}],"takeaway":"收银屏幕告诉你页面在要求什么，资金侧回执告诉你后来发生了什么。","missing":[{"category":"payment","title":"订单扣款和收款方待核","summary":"缺与订单金额、时间和收款方匹配的独立付款或链上回执。"}],"action":"模拟发起付款","history":{"reference":"#297 00:54.000 · 收银台付款请求","caption":"视频里的支付中心显示应付 1.30 USDT。该画面可定位付款请求，实际扣款仍待独立流水核对。","fallback":"合成对照｜收银页列出应付金额，交易记录里还没有资金侧回执。"}},{"id":"shop-payment-or-allowance","title":"区分支付与授权","story":"打开课堂对照记录，左侧是订单状态，右侧是模拟授权提示。检查这两个字段后，为付款和钱包权限分别记录结论。","ledger":[{"label":"订单付款","value":"未取得独立回执"},{"label":"钱包权限","value":"未取得实际请求或额度回执"}],"evidence":[{"label":"订单栏","text":"订单状态：待支付（合成）"},{"label":"钱包栏","text":"授权额度（合成文字摘录）"}],"question":"付款记录与授权记录分别缺失时，怎么记录才准确？","choices":[{"id":"deduce-approval","label":"把付款按钮当成已完成钱包授权","correct":false,"feedback":"按钮显示的是界面动作。实际权限变更要看钱包确认内容或对应回执。"},{"id":"two-states","label":"分别标记付款和授权待核","correct":true,"feedback":"对。两栏的证据来源不同，只有对应凭证能把那一栏从待核改成已核实。"}],"takeaway":"把付款、额度授权与到账分开查。缺证就保留待核。","missing":[{"category":"approval","title":"这一跳的真实权限状态待核","summary":"缺实际签名详情和权限回执，无法判断只是连接、付款还是授予代币使用额度。"}],"action":"查看模拟付款授权","history":{"reference":"#297 02:34.000 · 第二段付款请求","caption":"视频显示应付 10.00 USDT 的收银页。这个画面未显示实际钱包授权、额度或签名。","fallback":"合成对照｜付款请求和权限提示列在两栏。各自提交独立凭证后，才能单独核实对应状态。"}}]}],"detector":{"rules":[{"rule":"bot_label","category":"bot","title":"机器人字样","summary":"画面出现机器人字样。对应的机器人账户和历史归属仍需核对。","chinese":["机器人","機器人"],"english":"(?:^bot$|\\btelegram\\s+bot\\b|\\bstore\\s+bot\\b)","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"inline_attribution","category":"bot","title":"内联署名线索","summary":"画面出现「通过」或 via 署名样式。应核对原生消息字段才能确认内容生成方。","chinese":["通过@","透過@","通过:@","透過:@","经由@","經由@"],"english":"(?:^via$|\\bvia\\s*:?\\s*@)","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"forward_origin","category":"bot","title":"转发来源线索","summary":"画面出现转发来源字样。来源账号要以 Telegram 原生转发字段核对。","chinese":["转发自","轉發自","转发来源","轉發來源","轉寄自"],"english":"\\bforwarded\\s+from\\b","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"support_label","category":"bot","title":"客服角色字样","summary":"画面将某个入口标为客服。客服身份与商铺机器人本体分别核对。","chinese":["钱包客服","錢包客服","专属客服","專屬客服","联系客服","聯繫客服","聯絡客服"],"english":"\\b(?:wallet|customer)\\s+support\\b","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"external_link_prompt","category":"link","title":"打开链接提示","summary":"画面出现打开外部链接的提示。仅凭提示无法判定目标域名或最终跳转。","chinese":["打开链接","打開鏈接","打開連結","打开此链接","打開此連結","外部链接","外部連結"],"english":"\\b(?:open\\s+(?:(?:an?|the|this|external)\\s+)*link|external\\s+link)\\b","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"order_pending","category":"payment","title":"订单显示待支付","summary":"画面显示订单待支付或未付款。相应的账户账单和交易状态仍待核对。","chinese":["待支付","待付款","未付款","尚未支付"],"english":"\\b(?:awaiting\\s+payment|payment\\s+pending|pending\\s+payment|unpaid)\\b","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"checkout_page","category":"payment","title":"收银台界面","summary":"画面出现收银台或结账界面。实际支付机构与资金状态待核。","chinese":["支付中心","收银台","收銀台","收款台","收款頁","结账","結帳"],"english":"\\b(?:pay(?:ment)?\\s+cent(?:er|re)|check\\s*out|cashier)\\b","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"payment_request","category":"payment","title":"付款请求","summary":"画面请求付款或提示打开钱包付款。没有据此确认已经扣款。","chinese":["立即支付","立即付款","确认支付","確認支付","前往支付","钱包app支付","錢包app支付","打开钱包支付","打開錢包支付"],"english":"\\b(?:pay\\s+now|confirm\\s+(?:the\\s+)?payment|open\\s+(?:your\\s+)?wallet\\s+to\\s+pay)\\b","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"withdrawal_prompt","category":"payment","title":"提现界面线索","summary":"画面出现提现金额或提现请求。是否到账要与独立流水对照。","chinese":["提现金额","提現金額","提现的金额","提現的金額","申请提现","申請提現","提现到钱包","提現到錢包"],"english":"\\b(?:withdraw(?:al)?\\s+amount|amount\\s+to\\s+withdraw)\\b","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"network_label","category":"payment","title":"区块链网络字样","summary":"画面出现区块链网络或代币标准字样。交易所属网络要看独立回执。","chinese":["波场","波場"],"english":"\\b(?:tron|trc[\\s-]*20|erc[\\s-]*20)\\b","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"token_amount","category":"payment","title":"画面出现代币金额","summary":"画面列出代币金额。可能是余额、订单金额或支付请求，需要核对对应记录。","chinese":[],"english":"(?\u003c![\\w.])\\d+(?:[.,]\\d+)*\\s*(?:usdt|usdc|trx|eth|btc)\\b|\\b(?:usdt|usdc|trx|eth|btc)\\s*[:=]?\\s*\\d+(?:[.,]\\d+)*","exact":[],"rejectPrefixes":[],"status":"observed","grade":"E1"},{"rule":"payment_success_claim","category":"payment","title":"画面自称付款或领取成功","summary":"只能确认画面上的成功提示。实际转出或到账仍待独立回执核对。","chinese":["支付成功","付款成功","领取成功","領取成功","到账成功","到賬成功","交易成功","支付完成","已支付","已付款"],"english":"(?:^paid$|\\bpayment\\s+(?:successful|succeeded|completed)\\b|\\breceived\\s+successfully\\b)","exact":[],"rejectPrefixes":["未支付","未付款","未成功"],"status":"pending","grade":"E1"},{"rule":"transaction_identifier_label","category":"payment","title":"交易编号或回执字样","summary":"画面出现交易编号或回执字样。对应日期、金额、网络及成功状态需要另查。","chinese":["交易哈希","交易雜湊","链上回执","鏈上回執"],"english":"\\b(?:txid|transaction\\s+(?:hash|receipt))\\b","exact":[],"rejectPrefixes":[],"status":"pending","grade":"E1"},{"rule":"wallet_binding","category":"approval","title":"钱包绑定或连接提示","summary":"画面邀请绑定或连接钱包。钱包连接和代币额度是不同动作，实际签名内容待核。","chinese":["绑定钱包","綁定錢包","钱包绑定","錢包綁定","连接钱包","連接錢包","鏈接錢包","链接钱包","点击前往绑定","點擊前往綁定","前往绑定","前往綁定"],"english":"\\b(?:connect|bind|link)\\s+(?:a\\s+|your\\s+)?wallet\\b","exact":[],"rejectPrefixes":[],"status":"pending","grade":"E1"},{"rule":"authorization_text","category":"approval","title":"授权或额度字样","summary":"画面提到授权或额度。需要钱包待签详情或正确网络上的实际权限记录核对。","chinese":["代币授权","代幣授權","授权额度","授權額度","授权成功","授權成功","发起授权","發起授權","钱包授权","錢包授權","签名授权","簽名授權","无限授权","無限授權","批准额度","批准額度","授权金额","授權金額"],"english":"(?:^approval$|\\b(?:token\\s+approval|spending\\s+(?:limit|cap)|approve\\s+(?:(?:token\\s+)?spending|(?:the\\s+)?allowance)|approval\\s+(?:succeeded|successful|confirmed))\\b)","exact":["已授权","已授權","授权","授權"],"rejectPrefixes":[],"status":"pending","grade":"E1"}],"domainPattern":"(?:域名|网站地址|網址|网址|domain|website)\\s*:\\s*([\\w-]+(?:\\.[\\w-]+)+)(?=\\b|$)","visibleAddress":{"rule":"visible_address","category":"link","title":"画面出现网址或域名","summary":"只做本地文字识别。地址已省略，归属、授权收银关系和最终跳转仍待核对。","status":"observed","grade":"E1","row":0,"method":"detector"}},"hasLocalHistory":false}</script>
 <script>
@@ -561,6 +579,24 @@ window.detectTrainingEvidence = function detectTrainingEvidence(rows, spec) {
     }));
   }
 
+  const isEmbeddedImage = (value) => typeof value === "string" &&
+    /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(value);
+
+  function renderTelegram(telegram) {
+    const image = byId("telegram-image");
+    byId("telegram-panel").hidden = !telegram;
+    const hasImage = Boolean(telegram && isEmbeddedImage(telegram.image));
+    image.hidden = !hasImage;
+    byId("telegram-fallback").hidden = hasImage;
+    if (hasImage) {
+      image.alt = "Telegram 模拟演练截图 · " + telegram.reference;
+      image.src = telegram.image;
+    } else {
+      image.removeAttribute("src");
+    }
+    byId("telegram-reference").textContent = telegram ? telegram.reference : "";
+  }
+
   function renderHistory(history) {
     const image = byId("history-image");
     const fallback = byId("history-fallback");
@@ -572,8 +608,7 @@ window.detectTrainingEvidence = function detectTrainingEvidence(rows, spec) {
       byId("history-badge").textContent = "等待操作";
       return;
     }
-    const hasImage = typeof history.image === "string" &&
-      /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(history.image);
+    const hasImage = isEmbeddedImage(history.image);
     byId("history-badge").textContent = hasImage ? "本机历史材料" : "合成对照";
     byId("history-reference").textContent = history.reference;
     byId("history-caption").textContent = history.caption;
@@ -671,6 +706,7 @@ window.detectTrainingEvidence = function detectTrainingEvidence(rows, spec) {
     byId("evidence-panel").hidden = !run;
     byId("ledger-panel").hidden = !run;
     renderOperation(track, lesson);
+    renderTelegram(run ? step.telegram : null);
     renderHistory(run ? step.history : null);
     renderEvidence(run ? run.evidence : []);
     renderLedger(run ? run.ledger : []);
@@ -708,6 +744,11 @@ window.detectTrainingEvidence = function detectTrainingEvidence(rows, spec) {
   }
 
   byId("course-title").textContent = course.title;
+  if (course.telegramChannel) {
+    const channel = byId("telegram-channel");
+    channel.href = course.telegramChannel;
+    channel.hidden = false;
+  }
   byId("reset-training").addEventListener("click", reset);
   byId("operate-step").addEventListener("click", () => {
     const track = trackNow();
@@ -756,6 +797,10 @@ window.detectTrainingEvidence = function detectTrainingEvidence(rows, spec) {
     byId("history-image").hidden = true;
     byId("history-fallback").hidden = false;
     byId("history-badge").textContent = "合成对照";
+  });
+  byId("telegram-image").addEventListener("error", () => {
+    byId("telegram-image").hidden = true;
+    byId("telegram-fallback").hidden = false;
   });
   render();
 })();

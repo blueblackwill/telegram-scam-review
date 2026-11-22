@@ -15,7 +15,11 @@ DETECTOR = ROOT / "training" / "detector.js"
 LESSONS = ROOT / "training" / "lessons.json"
 PLACEHOLDER = "__TRAINING_PAYLOAD__"
 DETECTOR_PLACEHOLDER = "/*__TRAINING_DETECTOR__*/"
-MAX_HISTORY_IMAGE_BYTES = 4 * 1024 * 1024
+MAX_SCREENSHOT_BYTES = 4 * 1024 * 1024
+PUBLIC_CHANNEL = re.compile(r"https://t\.me/([A-Za-z][A-Za-z0-9_]{4,31})", re.ASCII)
+TELEGRAM_ROUTES = {"addemoji", "addlist", "addstickers", "addtheme", "boost", "confirmphone",
+                   "giftcode", "invoice", "joinchat", "login", "passport", "proxy",
+                   "setlanguage", "share", "socks"}
 LIVE_POINTER = re.compile(
     r"(?:https?://|tg://|walletconnect:|tonconnect:|\bt\.me/|@[A-Za-z0-9_]{4,})",
     re.IGNORECASE,
@@ -110,44 +114,71 @@ def detector_spec():
     }
 
 
-def history_image(path):
+def screenshot_image(path):
     if path.suffix.lower() not in {".png", ".jpg", ".jpeg"} or not path.is_file():
-        raise ValueError("历史对照仅接受本地 PNG 或 JPEG")
-    if path.stat().st_size > MAX_HISTORY_IMAGE_BYTES:
-        raise ValueError("单张历史截图超过 4 MiB")
+        raise ValueError("截图仅接受本地 PNG 或 JPEG")
+    if path.stat().st_size > MAX_SCREENSHOT_BYTES:
+        raise ValueError("单张截图超过 4 MiB")
     data = path.read_bytes()
     if data.startswith(b"\x89PNG\r\n\x1a\n"):
         mime = "image/png"
     elif data.startswith(b"\xff\xd8\xff"):
         mime = "image/jpeg"
     else:
-        raise ValueError("历史截图格式与文件内容不符")
+        raise ValueError("截图格式与文件内容不符")
     return "data:" + mime + ";base64," + base64.b64encode(data).decode("ascii")
 
 
-def browser_payload(data, history_manifest):
-    mapping = {}
-    if history_manifest:
-        mapping = json.loads(history_manifest.read_text(encoding="utf-8"))
-        expected = {step["id"] for lesson in data["lessons"] for step in lesson["steps"]}
-        if not isinstance(mapping, dict) or set(mapping) != expected:
-            raise ValueError("本机对照清单必须为每一关指定一张截图")
+def comparison_mapping(manifest, expected):
+    if manifest is None:
+        return {}
+    mapping = json.loads(manifest.read_text(encoding="utf-8"))
+    if not isinstance(mapping, dict) or set(mapping) != expected:
+        raise ValueError("本机对照清单必须为每一关指定一张截图")
+    return mapping
+
+
+def checked_channel(channel):
+    if channel is None:
+        return None
+    match = PUBLIC_CHANNEL.fullmatch(channel)
+    if not match or match[1].lower() in TELEGRAM_ROUTES:
+        raise ValueError("请提供 https://t.me/用户名 格式的公开演练频道链接")
+    return channel
+
+
+def browser_payload(data, history_manifest, telegram_manifest=None, channel=None):
+    channel = checked_channel(channel)
+    expected = {step["id"] for lesson in data["lessons"] for step in lesson["steps"]}
+    history = comparison_mapping(history_manifest, expected)
+    telegram = comparison_mapping(telegram_manifest, expected)
     for lesson in data["lessons"]:
         for step in lesson["steps"]:
             # The browser derives cues from the active card on every action.
             step.pop("findings")
             if history_manifest:
-                local_path = (history_manifest.parent / mapping[step["id"]]).resolve(strict=True)
-                step["history"]["image"] = history_image(local_path)
-    return {**data, "detector": detector_spec(), "hasLocalHistory": bool(history_manifest)}
+                local_path = (history_manifest.parent / history[step["id"]]).resolve(strict=True)
+                step["history"]["image"] = screenshot_image(local_path)
+            if telegram_manifest:
+                entry = telegram[step["id"]]
+                if not isinstance(entry, dict) or set(entry) != {"file", "reference"} or not all(
+                    isinstance(value, str) and value.strip() for value in entry.values()
+                ) or LIVE_POINTER.search(entry["reference"]):
+                    raise ValueError(f"{step['id']} 的 Telegram 实测截图须提供文件及不含链接的引用")
+                local_path = (telegram_manifest.parent / entry["file"]).resolve(strict=True)
+                step["telegram"] = {"reference": entry["reference"], "image": screenshot_image(local_path)}
+    payload = {**data, "detector": detector_spec(), "hasLocalHistory": bool(history_manifest)}
+    if channel:
+        payload["telegramChannel"] = channel
+    return payload
 
 
-def compiled_html(history_manifest=None):
+def compiled_html(history_manifest=None, telegram_manifest=None, channel=None):
     template = TEMPLATE.read_text(encoding="utf-8")
     if template.count(PLACEHOLDER) != 1 or template.count(DETECTOR_PLACEHOLDER) != 1:
         raise ValueError("The template needs one payload and one detector slot")
     validated = lesson_payload(LESSONS.read_text(encoding="utf-8"))
-    data = browser_payload(validated, history_manifest)
+    data = browser_payload(validated, history_manifest, telegram_manifest, channel)
     payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     payload = payload.replace("<", r"\u003c")
     code = DETECTOR.read_text(encoding="utf-8")
@@ -158,15 +189,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "training.html")
     parser.add_argument("--check", action="store_true", help="核对已生成的文件，不写入")
-    parser.add_argument("--history", type=Path, help="仅本机使用的截图清单 JSON")
+    parser.add_argument("--history", type=Path, help="仅本机使用的原始历史截图清单 JSON")
+    parser.add_argument("--telegram", type=Path, help="仅本机使用的 Telegram 模拟演练截图清单 JSON")
+    parser.add_argument("--channel", help="仅在本机文件显示的公开演练频道链接")
     args = parser.parse_args()
 
     try:
-        if args.history and args.output.resolve() == (ROOT / "training.html").resolve():
-            raise ValueError("请用 --output 指定仓库之外的本机文件")
-        if args.history and args.output.resolve().is_relative_to(ROOT):
-            raise ValueError("本机历史截图不能写进 Git 工作区")
-        expected = compiled_html(args.history)
+        if (args.history or args.telegram or args.channel) and args.output.resolve().is_relative_to(ROOT):
+            raise ValueError("请用 --output 指定 Git 工作区之外的本机文件")
+        expected = compiled_html(args.history, args.telegram, args.channel)
         if args.check:
             if not args.output.is_file() or args.output.read_text(encoding="utf-8") != expected:
                 print(f"需要重新生成：{args.output}", file=sys.stderr)
