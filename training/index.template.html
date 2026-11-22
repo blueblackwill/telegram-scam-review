@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Telegram 防骗闯关</title>
+<style>
+  :root {
+    --canvas: #f3f1ea;
+    --surface: #fffcf4;
+    --ink: #202b22;
+    --muted: #526057;
+    --line: #dcded0;
+    --green: #28543a;
+    --green-soft: #e9f0e0;
+    --accent: #dce8ac;
+    --amber: #775111;
+    --amber-soft: #fff0cf;
+    --rose: #9a3f34;
+    --rose-soft: #fff0e9;
+    --mono: ui-monospace, "SFMono-Regular", monospace;
+    font-family: "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--canvas);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  button { font: inherit; cursor: pointer; }
+  button:disabled { cursor: default; }
+  button:focus-visible { outline: 3px solid #8c721c; outline-offset: 3px; }
+  [hidden] { display: none !important; }
+  .frame { width: min(1290px, calc(100% - 64px)); margin: 0 auto; }
+  .top {
+    background: #233b2d;
+    color: #f8faef;
+    border-bottom: 3px solid #a6bc78;
+  }
+  .top .frame { min-height: 78px; display: flex; align-items: center; gap: 20px; }
+  .mark {
+    width: 39px; height: 39px; border: 1px solid #9dab8e; border-radius: 12px;
+    display: grid; place-items: center; flex: none;
+  }
+  .mark i { width: 16px; height: 16px; border: 1.6px solid #dce8ac; border-radius: 2px; position: relative; }
+  .mark i::after {
+    content: ""; position: absolute; width: 7px; height: 4px; border-left: 1.6px solid #dce8ac;
+    border-bottom: 1.6px solid #dce8ac; top: 4px; left: 3px; transform: rotate(-45deg);
+  }
+  .brand { font-size: 16px; font-weight: 800; margin: 0; line-height: 1.34; }
+  .brand-note { color: #d3dfca; font-size: 11px; font-weight: 600; margin-top: 5px; letter-spacing: .035em; }
+  .top-actions { margin-left: auto; display: flex; align-items: center; gap: 19px; }
+  .progress-text { font-size: 12px; color: #dce7d2; font-weight: 700; white-space: nowrap; }
+  .progress-text strong { color: #eef5cf; font-family: var(--mono); font-size: 17px; margin-left: 6px; }
+  .reset {
+    border: 1px solid #829681; padding: 8px 12px; border-radius: 8px; background: transparent;
+    color: inherit; white-space: nowrap; font-weight: 700; font-size: 12px;
+  }
+  .reset:hover { background: #36523a; }
+  .intro { padding: 29px 0 19px; }
+  h1, h2, h3, p { margin: 0; }
+  h1 { display: inline-block; margin-right: 13px; font-size: clamp(26px, 3.5vw, 39px); letter-spacing: -.045em; line-height: 1.22; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px; border-radius: 5px; padding: 4px 7px;
+    color: var(--green); font-weight: 800; font-size: 11px; line-height: 1.1; background: var(--green-soft);
+    white-space: nowrap;
+  }
+  .badge.pending { color: var(--amber); background: var(--amber-soft); }
+  .intro .badge { vertical-align: 5px; }
+  .intro p { margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .routes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 13px; }
+  .route {
+    padding: 12px 15px; text-align: left; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--surface); color: var(--ink); display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  }
+  .route:hover { border-color: #758b71; }
+  .route[aria-pressed="true"] { background: var(--green-soft); border-color: #8ca484; }
+  .route-title { display: block; font-size: 15px; font-weight: 850; }
+  .route-subtitle { display: block; font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 3px; }
+  .route-count { font: 700 13px var(--mono); white-space: nowrap; color: var(--green); }
+  .timeline {
+    display: grid; grid-template-columns: repeat(var(--steps, 4), minmax(0, 1fr)); gap: 7px;
+    margin-bottom: 20px;
+  }
+  .step-pill {
+    background: transparent; border: 1px solid #dadcce; color: #48594e; border-radius: 9px;
+    display: flex; align-items: center; justify-content: flex-start; gap: 7px; padding: 8px 9px;
+    text-align: left; font-size: 12px; font-weight: 700; min-width: 0;
+  }
+  .step-pill[aria-current="step"] { color: var(--green); border-color: #91a787; background: #eef1e4; }
+  .step-pill:disabled { color: #6b7369; }
+  .step-pill:not(:disabled):hover { border-color: var(--green); }
+  .step-number {
+    display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; background: #e4e6db;
+    font: 700 11px var(--mono); flex: none;
+  }
+  .step-pill[aria-current="step"] .step-number { color: white; background: var(--green); }
+  .step-pill[data-complete="true"] .step-number { color: #274731; background: var(--accent); }
+  .workbench {
+    display: grid; grid-template-columns: minmax(0, 1.13fr) minmax(0, .87fr); gap: 16px; align-items: start;
+    margin-bottom: 28px;
+  }
+  .panel {
+    min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 16px; box-shadow: 0 6px 18px #27392108;
+  }
+  .section { padding: 21px 23px; border-top: 1px solid #e4e5d8; }
+  .section:first-child { border-top: 0; }
+  .section-title { font-size: 15px; font-weight: 850; line-height: 1.35; }
+  .step-header { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 9px; }
+  .step-meta { color: var(--green); font-weight: 800; font-size: 11px; white-space: nowrap; }
+  .step-title { font-size: clamp(21px, 2.65vw, 29px); line-height: 1.2; letter-spacing: -.035em; font-weight: 850; }
+  .story { color: #425247; font-size: 13px; line-height: 1.63; margin-top: 9px; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+  .section-hint { color: var(--muted); font-size: 11px; line-height: 1.5; }
+  .evidence {
+    margin: 0; padding: 0; list-style: none; display: grid; gap: 6px;
+  }
+  .evidence li {
+    display: grid; grid-template-columns: 21px minmax(74px, .4fr) minmax(0, 1fr); align-items: start; gap: 8px;
+    background: #f7f7ed; border: 1px solid #e5e7da; border-radius: 8px; padding: 7px 9px;
+    font-size: 12px; line-height: 1.55;
+  }
+  .evidence li[data-active="true"] { border-color: #91a75a; background: #eef4d9; box-shadow: inset 3px 0 #82974f; }
+  .row-number { font: 650 11px/1.7 var(--mono); color: #60715f; }
+  .row-label { font-weight: 800; color: #3d523f; }
+  .row-text { overflow-wrap: anywhere; color: #29382f; }
+  .question { margin-bottom: 10px; font-size: 16px; line-height: 1.45; }
+  .choices { display: grid; gap: 7px; }
+  .choice {
+    width: 100%; text-align: left; background: #f8f8ee; border: 1px solid #d9dfcf; color: var(--ink);
+    min-height: 40px; border-radius: 9px; padding: 8px 11px; font-size: 13px; font-weight: 700;
+    line-height: 1.48; display: flex; gap: 8px; align-items: center;
+  }
+  .choice:not(:disabled):hover { background: #eef4e3; border-color: #84a071; }
+  .choice[data-result="right"] { background: var(--green-soft); border-color: #8eab81; color: #28543a; }
+  .choice[data-result="wrong"] { background: var(--rose-soft); border-color: #c59a8d; color: #80392f; }
+  .choice:not([data-result]):disabled { color: #59645b; }
+  .choice-icon {
+    flex: none; width: 24px; height: 24px; border-radius: 6px; background: #e8ecdb;
+    display: grid; place-items: center; color: #435943; font: 750 12px var(--mono);
+  }
+  .answer {
+    border-left: 3px solid #97b07e; padding: 8px 10px; margin-top: 11px; background: #f1f5e5;
+    font-size: 12px; line-height: 1.5; border-radius: 0 7px 7px 0;
+  }
+  .answer[data-correct="false"] { background: var(--rose-soft); border-color: #b66d58; }
+  .answer strong { display: block; margin-bottom: 3px; }
+  .decision-footer { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 9px; }
+  .takeaway { color: var(--muted); font-size: 11.5px; line-height: 1.55; }
+  .primary {
+    background: var(--green); color: white; border: 1px solid var(--green);
+    border-radius: 8px; padding: 8px 12px; white-space: nowrap; font-size: 12px; font-weight: 800;
+  }
+  .primary:not(:disabled):hover { background: #2f6a46; }
+  .primary:disabled { background: #e5e9dd; border-color: #e0e4d8; color: #5c695e; }
+  .detector-title { font-size: 19px; letter-spacing: -.025em; }
+  .detector-subtitle { color: var(--muted); font-size: 12px; line-height: 1.55; margin-top: 5px; }
+  .findings { display: grid; gap: 7px; margin: 13px 0 0; }
+  .finding {
+    border: 1px solid var(--line); border-radius: 8px; background: #fbf9ee; text-align: left;
+    color: var(--ink); padding: 8px 10px; min-width: 0; width: 100%;
+  }
+  .finding:hover { border-color: #7f9878; }
+  .finding[aria-pressed="true"] { border-color: #83a173; background: #eef3e5; }
+  .finding-top { display: flex; align-items: center; gap: 7px; }
+  .grade { flex: none; font: 700 10px var(--mono); color: var(--muted); }
+  .finding-title { display: block; font-size: 12.5px; font-weight: 800; margin-top: 5px; line-height: 1.35; }
+  .finding-summary { display: block; font-size: 11.5px; line-height: 1.5; margin-top: 4px; color: #526057; overflow-wrap: anywhere; }
+  .location { padding-top: 10px; border-top: 1px solid #e4e5d8; margin-top: 12px; color: var(--muted); font-size: 11.5px; line-height: 1.6; }
+  .ledger { background: #f7f7ed; display: grid; gap: 0; margin: 8px 0 0; border: 1px solid var(--line); border-radius: 8px; }
+  .ledger-pair { display: grid; grid-template-columns: minmax(76px, 1fr) minmax(0, 1.3fr); gap: 8px; padding: 8px 10px; border-top: 1px solid #e2e4d5; font-size: 12px; line-height: 1.4; }
+  .ledger-pair:first-child { border-top: 0; }
+  .ledger-pair dt { color: var(--muted); }
+  .ledger-pair dd { margin: 0; font-weight: 750; overflow-wrap: anywhere; }
+  .completion { padding: 25px; margin-bottom: 26px; }
+  .completion h2 { font-size: clamp(21px, 3.5vw, 31px); letter-spacing: -.035em; margin: 7px 0; }
+  .completion p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .complete-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .quiet {
+    color: var(--green); background: #f4f6e9; border: 1px solid #c9d1be; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; font-weight: 800;
+  }
+  .quiet:hover { background: #e8f0df; }
+  .endnote { font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line); margin-bottom: 22px; padding: 9px 0 0; line-height: 1.6; }
+  @media(max-width: 940px) {
+    .frame { width: calc(100% - 36px); }
+    .section { padding: 17px; }
+    .workbench { gap: 12px; }
+  }
+  @media(max-width: 710px) {
+    .frame { width: calc(100% - 24px); }
+    .top .frame { min-height: 64px; gap: 9px; }
+    .mark { width: 32px; height: 32px; border-radius: 9px; }
+    .brand { font-size: 13px; }
+    .brand-note { font-size: 10px; letter-spacing: 0; margin-top: 3px; }
+    .top-actions { gap: 8px; }
+    .progress-text { font-size: 0; }
+    .progress-text strong { font-size: 14px; margin-left: 0; }
+    .reset { font-size: 11px; padding: 6px 8px; }
+    .intro { padding: 19px 0 12px; }
+    .intro .badge { vertical-align: 2px; }
+    .routes { gap: 6px; }
+    .route { gap: 7px; padding: 8px; }
+    .route-title { font-size: 12px; }
+    .route-subtitle { font-size: 10.5px; line-height: 1.4; }
+    .route-count { font-size: 11px; }
+    .timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-bottom: 12px; }
+    .step-pill { padding: 5px 7px; font-size: 11px; }
+    .workbench { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .section { padding: 14px; }
+    .evidence li { grid-template-columns: 17px minmax(59px, .35fr) minmax(0, 1fr); gap: 5px; }
+  }
+  @media(prefers-reduced-motion: no-preference) {
+    .finding, .choice, .route { transition: background-color .15s, border-color .15s; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="frame">
+    <div class="mark" aria-hidden="true"><i></i></div>
+    <div>
+      <p class="brand">证据核验演练室</p>
+      <p class="brand-note">本地教学 · 合成证据</p>
+    </div>
+    <div class="top-actions">
+      <p class="progress-text">已通过 <strong data-testid="progress-count" id="progress-count" aria-live="polite"></strong></p>
+      <button type="button" class="reset" data-testid="reset-training" id="reset-training">重新开始</button>
+    </div>
+  </div>
+</header>
+<main class="frame" data-testid="training-app">
+  <section class="intro">
+    <h1 id="course-title">Telegram 防骗闯关</h1>
+    <span class="badge">合成样例</span>
+    <p>沿两条路线拆解消息、订单和权限。每一步选择能支持结论的凭证。</p>
+  </section>
+  <section id="boot-error" class="panel completion" role="alert" hidden>
+    <h2>演练数据未生成</h2>
+    <p>请按仓库 README 生成完整的离线教学页，再打开生成的文件。</p>
+  </section>
+  <nav id="routes" class="routes" aria-label="教学路线"></nav>
+  <nav id="timeline" class="timeline" aria-label="当前路线关卡"></nav>
+  <div id="workbench" class="workbench" hidden>
+    <article class="panel">
+      <header class="section">
+        <div class="step-header">
+          <p id="step-meta" class="step-meta"></p>
+          <span class="badge">本关情景</span>
+        </div>
+        <h2 id="step-title" class="step-title" data-testid="step-title" tabindex="-1"></h2>
+        <p id="story" class="story"></p>
+      </header>
+      <section class="section" aria-labelledby="evidence-title">
+        <div class="section-head">
+          <h3 class="section-title" id="evidence-title">合成证据条目</h3>
+          <p class="section-hint">点右侧线索可定位</p>
+        </div>
+        <ol class="evidence" id="evidence"></ol>
+      </section>
+      <section class="section" aria-labelledby="question">
+        <h3 id="question" class="question"></h3>
+        <div class="choices" id="choices" role="group" aria-labelledby="question"></div>
+        <div class="answer" id="answer-feedback" data-testid="answer-feedback" role="status" aria-live="polite" tabindex="-1" hidden></div>
+        <div class="decision-footer">
+          <p class="takeaway" id="takeaway"></p>
+          <button type="button" class="primary" id="next-step" data-testid="next-step" disabled>下一关</button>
+        </div>
+      </section>
+    </article>
+    <aside class="panel" aria-label="风险与证据状态">
+      <section class="section">
+        <h2 class="detector-title">线索检测</h2>
+        <p class="detector-subtitle">E1 表示文本可见或尚待确认。E0 表示缺少能验证结论的材料。</p>
+        <div class="findings" id="findings"></div>
+        <p class="location" id="finding-location" data-testid="finding-location" aria-live="polite">选择一条线索，查看它的位置或需要补的材料。</p>
+      </section>
+      <section class="section" aria-labelledby="ledger-title">
+        <h3 class="section-title" id="ledger-title">三层证据 · 合成记录</h3>
+        <dl class="ledger" id="ledger"></dl>
+      </section>
+    </aside>
+  </div>
+  <section class="panel completion" id="completion" data-testid="completion" hidden>
+    <span class="badge" id="complete-badge"></span>
+    <h2 id="complete-title" data-testid="completion-title" tabindex="-1"></h2>
+    <p id="complete-body"></p>
+    <div class="complete-actions">
+      <button type="button" class="primary" id="continue-route" data-testid="continue-route"></button>
+      <button type="button" class="quiet" id="review-route" data-testid="review-route">回看本路线</button>
+    </div>
+  </section>
+  <p class="endnote">观察到的文本、钱包权限和资金流水各有自己的证据。完成进度只记录你在这次演练里的判断。</p>
+</main>
+<script id="training-data" type="application/json">__TRAINING_PAYLOAD__</script>
+<script>
+(() => {
+  "use strict";
+
+  const byId = (id) => document.getElementById(id);
+  let course;
+  try {
+    course = JSON.parse(byId("training-data").textContent);
+    if (!Array.isArray(course.lessons) || course.lessons.length === 0 ||
+        course.lessons.some((lesson) => !Array.isArray(lesson.steps) || lesson.steps.length === 0)) {
+      throw new Error("Missing lessons");
+    }
+  } catch (_) {
+    byId("boot-error").hidden = false;
+    byId("reset-training").disabled = true;
+    return;
+  }
+
+  const categories = {
+    bot: "机器人",
+    link: "外链",
+    payment: "付款",
+    approval: "授权"
+  };
+  const state = {
+    lesson: 0,
+    step: 0,
+    completion: false,
+    selectedFinding: null,
+    answers: new Map(),
+    passed: new Set()
+  };
+  const total = course.lessons.reduce((count, lesson) => count + lesson.steps.length, 0);
+  const lessonNow = () => course.lessons[state.lesson];
+  const stepNow = () => lessonNow().steps[state.step];
+  const stepKey = (lesson, step) => lesson.id + "/" + step.id;
+  const currentKey = () => stepKey(lessonNow(), stepNow());
+  const isPassed = (lesson, step) => state.passed.has(stepKey(lesson, step));
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function button(className, testId, label) {
+    const node = element("button", className, label);
+    node.type = "button";
+    node.dataset.testid = testId;
+    return node;
+  }
+
+  function gotoStep(lesson, step) {
+    state.lesson = lesson;
+    state.step = step;
+    state.completion = false;
+    state.selectedFinding = null;
+    render();
+    byId("step-title").focus();
+  }
+
+  function firstOpenStep(lesson) {
+    const index = lesson.steps.findIndex((step) => !isPassed(lesson, step));
+    return index === -1 ? 0 : index;
+  }
+
+  function renderRoutes() {
+    byId("progress-count").textContent = state.passed.size + " / " + total;
+    byId("routes").replaceChildren(...course.lessons.map((lesson, index) => {
+      const node = button("route", "lesson-select");
+      node.dataset.lesson = lesson.id;
+      node.setAttribute("aria-pressed", String(index === state.lesson));
+      const description = element("span");
+      description.append(element("span", "route-title", lesson.title), element("span", "route-subtitle", lesson.subtitle));
+      const count = lesson.steps.filter((step) => isPassed(lesson, step)).length;
+      node.append(description, element("span", "route-count", count + "/" + lesson.steps.length));
+      node.addEventListener("click", () => gotoStep(index, firstOpenStep(lesson)));
+      return node;
+    }));
+  }
+
+  function renderTimeline() {
+    const lesson = lessonNow();
+    byId("timeline").style.setProperty("--steps", lesson.steps.length);
+    byId("timeline").replaceChildren(...lesson.steps.map((step, index) => {
+      const node = button("step-pill", "step-select");
+      node.dataset.step = step.id;
+      const passed = isPassed(lesson, step);
+      node.dataset.complete = String(passed);
+      node.disabled = index > 0 && !isPassed(lesson, lesson.steps[index - 1]);
+      if (!state.completion && index === state.step) node.setAttribute("aria-current", "step");
+      node.append(element("span", "step-number", passed ? "✓" : index + 1), element("span", "", step.title));
+      node.addEventListener("click", () => gotoStep(state.lesson, index));
+      return node;
+    }));
+  }
+
+  function renderEvidence(step) {
+    byId("evidence").replaceChildren(...step.evidence.map((row, index) => {
+      const node = element("li");
+      node.dataset.testid = "evidence-row";
+      node.dataset.row = String(index);
+      node.dataset.active = "false";
+      node.append(
+        element("span", "row-number", String(index + 1).padStart(2, "0")),
+        element("span", "row-label", row.label),
+        element("span", "row-text", row.text)
+      );
+      return node;
+    }));
+  }
+
+  function updateFinding(step) {
+    const active = state.selectedFinding;
+    const finding = active === null ? null : step.findings[active];
+    const row = finding && Number.isInteger(finding.row) && step.evidence[finding.row]
+      ? finding.row : null;
+    byId("evidence").querySelectorAll("[data-row]").forEach((node) => {
+      node.dataset.active = String(row !== null && Number(node.dataset.row) === row);
+    });
+    byId("findings").querySelectorAll(".finding").forEach((node, index) => {
+      node.setAttribute("aria-pressed", String(active === index));
+    });
+    if (!finding) {
+      byId("finding-location").textContent = "选择一条线索，查看它的位置或需要补的材料。";
+      return;
+    }
+    if (row === null) {
+      const location = finding.status === "pending" ? "待核 · " : "没有对应文本行 · ";
+      byId("finding-location").textContent = location + finding.summary;
+      return;
+    }
+    byId("finding-location").textContent = "已定位第 " + (row + 1) + " 条 · " + step.evidence[row].label;
+  }
+
+  function renderFindings(step) {
+    const nodes = step.findings.map((finding, index) => {
+      const pending = finding.status === "pending";
+      const node = button("finding", "finding");
+      node.dataset.category = finding.category;
+      node.dataset.status = finding.status;
+      node.dataset.row = finding.row === null ? "" : String(finding.row);
+      const top = element("span", "finding-top");
+      top.append(
+        element("span", "badge" + (pending ? " pending" : ""), pending ? "待核" : "可见线索"),
+        element("span", "grade", (categories[finding.category] || "线索") + " · " + finding.grade)
+      );
+      node.append(
+        top,
+        element("span", "finding-title", finding.title),
+        element("span", "finding-summary", finding.summary)
+      );
+      node.addEventListener("click", () => {
+        state.selectedFinding = index;
+        updateFinding(step);
+      });
+      return node;
+    });
+    if (nodes.length === 0) nodes.push(element("p", "section-hint", "这一关暂未提取到已标记的线索。"));
+    byId("findings").replaceChildren(...nodes);
+    updateFinding(step);
+  }
+
+  function renderLedger(step) {
+    byId("ledger").replaceChildren(...step.ledger.map((row) => {
+      const pair = element("div", "ledger-pair");
+      pair.append(element("dt", "", row.label), element("dd", "", row.value));
+      return pair;
+    }));
+  }
+
+  function renderDecision(step) {
+    const key = currentKey();
+    const lastChoice = state.answers.get(key);
+    const passed = state.passed.has(key);
+    byId("question").textContent = step.question;
+    byId("choices").replaceChildren(...step.choices.map((choice, index) => {
+      const node = button("choice", "choice");
+      node.dataset.choice = choice.id;
+      node.disabled = passed;
+      if (lastChoice === choice) node.dataset.result = choice.correct ? "right" : "wrong";
+      node.append(element("span", "choice-icon", String.fromCharCode(65 + index)), element("span", "", choice.label));
+      node.addEventListener("click", () => {
+        state.answers.set(key, choice);
+        if (choice.correct) state.passed.add(key);
+        renderRoutes();
+        renderTimeline();
+        renderDecision(step);
+        byId("answer-feedback").focus();
+      });
+      return node;
+    }));
+    const feedback = byId("answer-feedback");
+    feedback.hidden = !lastChoice;
+    if (lastChoice) {
+      feedback.dataset.correct = String(lastChoice.correct);
+      feedback.replaceChildren(
+        element("strong", "", lastChoice.correct ? "判断正确" : "再核对一条凭证"),
+        element("p", "", lastChoice.feedback)
+      );
+    }
+    byId("takeaway").textContent = passed ? step.takeaway : "选对凭证后解锁下一关。";
+    byId("next-step").disabled = !passed;
+    byId("next-step").textContent = state.step + 1 < lessonNow().steps.length ? "下一关" : "查看结果";
+  }
+
+  function renderCompletion() {
+    const allPassed = state.passed.size === total;
+    byId("complete-badge").textContent = allPassed ? "全部完成" : "路线通过";
+    byId("complete-title").textContent = allPassed ? "两条路线全部通过" : lessonNow().title + "已完成";
+    byId("complete-body").textContent = allPassed
+      ? "你已核对完全部 " + total + " 个关卡。回看任一路线，复查可见线索与仍需独立凭证的结论。"
+      : "已完成这条路线。下一条路线从不同的消息入口出发，继续练习核对权限和流水。";
+    byId("continue-route").textContent = allPassed ? "再练一遍" : "进入另一条路线";
+  }
+
+  function render() {
+    renderRoutes();
+    renderTimeline();
+    byId("workbench").hidden = state.completion;
+    byId("completion").hidden = !state.completion;
+    if (state.completion) {
+      renderCompletion();
+      return;
+    }
+    const step = stepNow();
+    byId("step-meta").textContent = "第 " + (state.step + 1) + " 关／共 " + lessonNow().steps.length + " 关";
+    byId("step-title").textContent = step.title;
+    byId("story").textContent = step.story;
+    renderEvidence(step);
+    renderFindings(step);
+    renderLedger(step);
+    renderDecision(step);
+  }
+
+  function reset() {
+    state.answers.clear();
+    state.passed.clear();
+    gotoStep(0, 0);
+  }
+
+  byId("course-title").textContent = course.title;
+  byId("reset-training").addEventListener("click", reset);
+  byId("next-step").addEventListener("click", () => {
+    if (!state.passed.has(currentKey())) return;
+    if (state.step + 1 < lessonNow().steps.length) {
+      gotoStep(state.lesson, state.step + 1);
+      return;
+    }
+    state.completion = true;
+    render();
+    byId("complete-title").focus();
+  });
+  byId("review-route").addEventListener("click", () => gotoStep(state.lesson, 0));
+  byId("continue-route").addEventListener("click", () => {
+    const other = course.lessons.findIndex((lesson) => lesson.steps.some((step) => !isPassed(lesson, step)));
+    if (other === -1) reset();
+    else gotoStep(other, firstOpenStep(course.lessons[other]));
+  });
+  render();
+})();
+</script>
+</body>
+</html>

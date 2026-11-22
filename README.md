@@ -4,6 +4,20 @@
 
 公开仓库中的演示素材是独立绘制的教学图。它没有 Telegram 登录、商铺、收款或钱包功能。使用真实材料时，把输入清单、素材和分析结果放在本地，由使用者自行保管。
 
+## 玩本地防骗闯关
+
+下载或克隆后，用浏览器打开 [training.html](training.html)。打开文件即可练习。页面不需要终端、服务器或联网。左侧选择「红包与提现」或「商铺与付款」路线，每条四关。先判断该核对哪份证据，再看反馈和下一关。点击一条检测结果，可以定位到对应的合成证据行。
+
+每关的检测结果由现有的 \`rules.py\` 根据合成证据生成。证据缺失条目单列待核。页面使用独立的教学布局和固定假数据，所有点击只改变本地练习进度。
+
+要改练习内容，在 \`training/lessons.json\` 编辑关卡。页面结构在 \`training/index.template.html\`。生成和复核命令如下：
+
+\`\`\`sh
+python3 -B build_training.py
+python3 -B build_training.py --check
+python3 -B -m unittest -v test_rules test_training
+\`\`\`
+
 ## 运行教学样例
 
 默认 OCR 需要 macOS Apple Vision、Swift 命令行工具和 Python 3.9+。视频额外需要 PATH 中的 FFmpeg 和 FFprobe。截图模式无需 FFmpeg。初次运行会在 `.build/` 编译本地 OCR 助手，不安装 Python 依赖。
