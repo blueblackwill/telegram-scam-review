@@ -2,7 +2,25 @@
 
 一个离线的截图和视频线索标记工具。可识别机器人与消息归因、外链提示、付款请求和授权相关文字。结果按证据来源展示，用于人工复核。
 
-公开仓库中的演示素材是独立绘制的教学图。它没有 Telegram 登录、商铺、收款或钱包功能。使用真实材料时，把输入清单、素材和分析结果放在本地，由使用者自行保管。
+公开仓库使用合成课堂材料。真实材料的输入清单、截图、视频和分析结果由复核者保存在本地。
+
+## 在 Telegram 里练习
+
+[纸舟课堂公开教学频道](https://t.me/blueblackwill)收录八条短例。Telegram Bot 源码在 `telegram_classroom.py`（场景和按钮）与 `telegram_service.py`（Telegram 消息服务）。直接私聊自己部署的 Bot，发 `/start`，选择红包提现或商铺订单路线。每关先揭示一张课堂记录，再用按钮判断下一步。选错会提示「模拟受骗 · 请提高警惕」，说明可能后果并给出重试按钮。四步核证完成后显示「通关」。
+
+教学界面使用虚构品牌、教学点数和订单。Bot 只响应主动发起的私聊交互。课程没有真实收款、钱包、签名或跳转功能。
+
+### 在 macOS 启动服务
+
+先在 [Telegram 官方 BotFather](https://t.me/BotFather) 用 `/newbot` 注册教学 Bot。在终端进入一个路径稳定的仓库副本，运行以下命令。第一步让所有者在终端隐藏输入 Token，权限限定的本机文件供服务读取。
+
+```sh
+python3 -B ops/macos_telegram_service.py configure
+python3 -B ops/macos_telegram_service.py install
+python3 -B ops/macos_telegram_service.py status
+```
+
+Mac 用户已登录、联网且机器保持唤醒时，launchd 会运行进程并在异常退出后重启。用 `python3 -B ops/macos_telegram_service.py stop` 停止。需要全天响应时，把同一服务放在自己管理的持续在线主机，并用该主机的进程管理器监督。账户凭据留在运行机器，GitHub 用于分发源码。
 
 ## 玩本地防骗闯关
 
@@ -21,7 +39,7 @@ python3 -B -m unittest -v test_rules test_training test_training_bot
 node --test test_training_replay.js
 ```
 
-### Telegram 教学消息和本机机器人
+### 教学消息和终端练习
 
 [纸舟课堂的八条模拟演练消息](training/telegram-posts.json)按关卡 ID 保存，覆盖红包、余额、提现、授权提示、订单、外链和付款。每条用练习点和虚构订单讲解如何核验一项线索。
 
@@ -29,7 +47,7 @@ node --test test_training_replay.js
 python3 -B training_bot.py
 ```
 
-选一条路线后，每按一次回车完成一步、增加一个课堂进度点，再显示对应的风险线索和待核项。也可附加 `--route gift` 或 `--route shop` 直接启动路线。机器人是终端内的离线教学程序。
+选一条路线后，每按一次回车完成一步、增加一个课堂进度点，再显示对应的风险线索和待核项。也可附加 `--route gift` 或 `--route shop` 直接启动路线。这段终端程序离线运行。
 
 ### 本地截图对照
 
