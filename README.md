@@ -10,6 +10,8 @@
 
 每关的检测结果由现有的 \`rules.py\` 根据合成证据生成。证据缺失条目单列待核。页面使用独立的教学布局和固定假数据，所有点击只改变本地练习进度。
 
+![授权关实测画面（合成教学数据）](training/sample-screen.png)
+
 要改练习内容，在 \`training/lessons.json\` 编辑关卡。页面结构在 \`training/index.template.html\`。生成和复核命令如下：
 
 \`\`\`sh
