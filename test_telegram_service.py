@@ -72,6 +72,7 @@ class TelegramServiceTests(unittest.TestCase):
     def test_start_is_explicit_private_and_does_not_echo_user_content(self):
         api = Mock()
         classroom = SampleClassroom()
+        stop, log = Mock(), Mock()
         for update in (
             {"message": message("/start --other")},
             {"message": message("freeform input")},
@@ -79,9 +80,9 @@ class TelegramServiceTests(unittest.TestCase):
             {"channel_post": message()},
             {"message": {**message(), "from": {"id": 11}}},
         ):
-            dispatch(api, classroom, update)
+            dispatch(api, classroom, update, stop, log)
         api.call.assert_not_called()
-        dispatch(api, classroom, {"message": message()})
+        dispatch(api, classroom, {"message": message()}, stop, log)
         api.call.assert_called_once_with("sendMessage", {
             **classroom.screen(), "chat_id": 10, "link_preview_options": {"is_disabled": True},
         })
@@ -89,8 +90,9 @@ class TelegramServiceTests(unittest.TestCase):
     def test_callbacks_are_acknowledged_before_edit_and_invalid_data_is_not_echoed(self):
         api = Mock()
         classroom = SampleClassroom()
+        stop, log = Mock(), Mock()
         query = {"id": "fixture-query", "data": "lesson:gift", "from": {"id": 10}, "message": message()}
-        dispatch(api, classroom, {"callback_query": query})
+        dispatch(api, classroom, {"callback_query": query}, stop, log)
         self.assertEqual(api.call.call_args_list, [
             call("answerCallbackQuery", {"callback_query_id": "fixture-query"}),
             call("editMessageText", {
@@ -99,13 +101,52 @@ class TelegramServiceTests(unittest.TestCase):
             }),
         ])
         api.reset_mock()
-        dispatch(api, classroom, {"callback_query": {**query, "data": "unknown callback"}})
+        dispatch(api, classroom, {"callback_query": {**query, "data": "unknown callback"}}, stop, log)
         api.call.assert_called_once_with("answerCallbackQuery", {
             "callback_query_id": "fixture-query", "text": "此按钮已失效。发送 /start 可以返回课堂首页。",
         })
         api.reset_mock()
-        dispatch(api, classroom, {"callback_query": {**query, "message": message(chat_type="group")}})
+        dispatch(api, classroom, {"callback_query": {**query, "message": message(chat_type="group")}}, stop, log)
         api.call.assert_not_called()
+
+    def test_failed_callback_acknowledgement_does_not_swallow_valid_edit(self):
+        api = Mock()
+        stop, log = Mock(), Mock()
+        stop.wait.return_value = False
+        query = {"id": "fixture-query", "data": "lesson:gift", "from": {"id": 10}, "message": message()}
+        for status in (400, 429, None):
+            with self.subTest(status=status):
+                api.reset_mock()
+                stop.reset_mock()
+                log.reset_mock()
+                error = TelegramError("answerCallbackQuery", status, retry_after=4 if status == 429 else 0)
+                api.call.side_effect = [error, True]
+                dispatch(api, SampleClassroom(), {"callback_query": query}, stop, log)
+                self.assertEqual([entry.args[0] for entry in api.call.call_args_list],
+                                 ["answerCallbackQuery", "editMessageText"])
+                log.assert_called_once_with(f"Telegram 教学回执失败 · {error}")
+                self.assertNotIn(query["id"], str(log.call_args_list))
+                if status == 429:
+                    stop.wait.assert_called_once_with(4)
+                else:
+                    stop.wait.assert_not_called()
+
+    def test_failed_callback_acknowledgement_keeps_invalid_and_unavailable_states_closed(self):
+        api = Mock()
+        stop, log = Mock(), Mock()
+        query = {"id": "fixture-query", "data": "unknown callback", "from": {"id": 10}, "message": message()}
+        api.call.side_effect = TelegramError("answerCallbackQuery", 400)
+        with self.assertRaises(TelegramError):
+            dispatch(api, SampleClassroom(), {"callback_query": query}, stop, log)
+        api.call.assert_called_once()
+        log.assert_not_called()
+        api.reset_mock()
+        api.call.side_effect = TelegramError("answerCallbackQuery", 401)
+        query["data"] = "lesson:gift"
+        with self.assertRaises(TelegramError):
+            dispatch(api, SampleClassroom(), {"callback_query": query}, stop, log)
+        api.call.assert_called_once()
+        log.assert_not_called()
 
     def test_poll_retries_and_acknowledges_callbacks_without_persisting_inputs(self):
         api = Mock()
@@ -146,6 +187,18 @@ class TelegramServiceTests(unittest.TestCase):
             run(api, SampleClassroom(), stop, Mock())
         self.assertEqual(caught.exception.status, 409)
         stop.wait.assert_not_called()
+
+    def test_failed_delivery_reports_only_approved_diagnostic_fields(self):
+        api = Mock()
+        stop, log = Mock(), Mock()
+        stop.is_set.side_effect = [False, False, True]
+        api.call.side_effect = [
+            [{"update_id": 100, "message": message()}],
+            TelegramError("sendMessage", 403),
+        ]
+        run(api, SampleClassroom(), stop, log)
+        log.assert_called_once_with("Telegram 教学操作失败 · sendMessage · HTTP 403")
+        self.assertNotIn("fixture", str(log.call_args_list))
 
     def test_only_public_username_returned_from_startup_check(self):
         api = Mock()

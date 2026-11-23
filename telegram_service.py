@@ -32,10 +32,11 @@ class TelegramError(Exception):
     """The request URL and untrusted Telegram error description are never logged."""
 
     def __init__(self, method, status=None, retry_after=0):
-        self.status = status
+        self.status = status if type(status) is int and 100 <= status <= 599 else None
         self.retry_after = retry_after
-        detail = f"HTTP {status}" if status is not None else "连接或响应异常"
-        super().__init__(f"{method} · {detail}")
+        detail = f"HTTP {self.status}" if self.status is not None else "连接或响应异常"
+        label = method if isinstance(method, str) and method in BOT_METHODS else "未知方法"
+        super().__init__(f"{label} · {detail}")
 
 
 class TelegramAPI:
@@ -124,7 +125,7 @@ def private_chat(message, sender):
     return None
 
 
-def dispatch(api, classroom, update):
+def dispatch(api, classroom, update, stop, log):
     message = update.get("message")
     if isinstance(message, dict) and message.get("text") == "/start":
         chat_id = private_chat(message, message.get("from"))
@@ -152,7 +153,16 @@ def dispatch(api, classroom, update):
     answer = {"callback_query_id": callback_id}
     if screen is None:
         answer["text"] = "此按钮已失效。发送 /start 可以返回课堂首页。"
-    api.call("answerCallbackQuery", answer)
+    try:
+        api.call("answerCallbackQuery", answer)
+    except TelegramError as error:
+        if screen is None or error.status in CONFIGURATION_ERRORS:
+            raise
+        # The acknowledgement clears Telegram's spinner. A valid lesson can
+        # still advance if the acknowledgement is expired or undelivered.
+        log(f"Telegram 教学回执失败 · {error}")
+        if error.status == 429 and stop.wait(error.retry_after or 1):
+            return
     if screen is not None:
         api.call("editMessageText", {
             **screen,
@@ -194,10 +204,11 @@ def run(api, classroom, stop, log):
                 continue
             offset = update_id + 1
             try:
-                dispatch(api, classroom, update)
+                dispatch(api, classroom, update, stop, log)
             except TelegramError as error:
                 if error.status in CONFIGURATION_ERRORS:
                     raise
+                log(f"Telegram 教学操作失败 · {error}")
                 if error.status == 429:
                     stop.wait(error.retry_after or 1)
                 # A failed request may have been delivered. Do not risk duplicating it.
